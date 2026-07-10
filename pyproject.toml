@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aurelius"
+version = "0.1.0"
+description = "Aurelius — a fact-checked research MCP server. Bring rigorous, web-verified academic drafting to Claude, ChatGPT, Gemini and any MCP-capable app."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Aurelius" }]
+keywords = ["mcp", "research", "fact-checking", "llm", "agent", "claude", "gemini", "chatgpt"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Autonomous (BYO-key) mode works over plain REST via httpx, so no heavy SDKs are
+# required. These extras are only convenience pins for users who want them.
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+# `aurelius`         -> launch the MCP server (stdio)
+# `aurelius-research`-> run one autonomous research job from the terminal
+aurelius = "aurelius.server:main"
+aurelius-research = "aurelius.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/aurelius"
+Issues = "https://github.com/your-org/aurelius/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aurelius"]
