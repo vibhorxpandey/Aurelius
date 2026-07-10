@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aurelius": {
+      "command": "aurelius",
+      "env": {
+        "TAVILY_API_KEY": "tvly-your-key-here"
+      }
+    }
+  }
+}
