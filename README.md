@@ -26,11 +26,12 @@ where Aurelius drives its own LLM — that one needs an LLM API key with quota.
 ## Install
 
 ```bash
-pip install aurelius
+pip install aurelius-mcp
 ```
 
-> If the PyPI name `aurelius` is unavailable in your environment, install `aurelius-mcp`
-> (same import name `aurelius`, same `aurelius` command).
+> The bare name `aurelius` was already taken on PyPI, so the package ships as
+> **`aurelius-mcp`**. The import name (`import aurelius`) and the CLI command (`aurelius`)
+> are unchanged.
 
 This provides two commands:
 - `aurelius` — launch the MCP server (stdio). This is what MCP clients run.
