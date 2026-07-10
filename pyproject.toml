@@ -6,12 +6,12 @@ build-backend = "hatchling.build"
 # The bare name "aurelius" is already claimed on PyPI, so the distribution ships as
 # "aurelius-mcp". The import package and CLI command are still `aurelius`.
 name = "aurelius-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Aurelius — a fact-checked research MCP server. Bring rigorous, web-verified academic drafting to Claude, ChatGPT, Gemini and any MCP-capable app."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Aurelius" }]
+authors = [{ name = "Vibhor Pandey", email = "vibhorpandey09@gmail.com" }]
 keywords = ["mcp", "research", "fact-checking", "llm", "agent", "claude", "gemini", "chatgpt"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,8 +37,9 @@ aurelius = "aurelius.server:main"
 aurelius-research = "aurelius.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/aurelius"
-Issues = "https://github.com/your-org/aurelius/issues"
+Homepage = "https://github.com/vibhorxpandey/Aurelius"
+Repository = "https://github.com/vibhorxpandey/Aurelius"
+Issues = "https://github.com/vibhorxpandey/Aurelius/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aurelius"]
