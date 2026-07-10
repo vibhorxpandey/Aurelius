@@ -6,6 +6,7 @@ client launches the server it can inject these via the `env` block of its config
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -42,13 +43,30 @@ def get_llm_key(provider: str) -> Optional[str]:
 def get_output_dir() -> Path:
     """Directory where drafts and reports are written.
 
-    Defaults to `./aurelius_output` under the current working directory. Override with
-    AURELIUS_OUTPUT_DIR. The directory is created on demand.
+    Defaults to `~/aurelius_output` in the user's home directory. This is deliberately
+    NOT relative to the current working directory: MCP clients (e.g. Claude Desktop)
+    frequently launch the server with cwd set to a protected/unknown location such as
+    ``C:\\Windows\\System32``, which is not writable. Override with AURELIUS_OUTPUT_DIR.
+    Falls back to a temp directory if the preferred location can't be created.
     """
-    raw = os.environ.get("AURELIUS_OUTPUT_DIR", "aurelius_output")
-    path = Path(raw).expanduser().resolve()
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    candidates = []
+    raw = os.environ.get("AURELIUS_OUTPUT_DIR")
+    if raw:
+        candidates.append(Path(raw).expanduser())
+    candidates.append(Path.home() / "aurelius_output")
+    candidates.append(Path(tempfile.gettempdir()) / "aurelius_output")
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate.resolve()
+        except OSError:
+            continue
+
+    # Last resort — never crash a tool call over the output location.
+    fallback = Path(tempfile.gettempdir()) / "aurelius_output"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback.resolve()
 
 
 def resolve_output_path(filename: str) -> Path:
