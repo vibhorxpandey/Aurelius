@@ -1,5 +1,10 @@
 # Aurelius
 
+[![PyPI version](https://img.shields.io/pypi/v/aurelius-mcp.svg)](https://pypi.org/project/aurelius-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/aurelius-mcp.svg)](https://pypi.org/project/aurelius-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-blue.svg)](https://modelcontextprotocol.io)
+
 **A fact-checked research MCP server.** Aurelius gives any MCP-capable app — Claude
 (Desktop / Code / claude.ai), Gemini CLI, Cursor, and (via a remote deployment) ChatGPT —
 a set of research tools that **verify every citation and claim against live web sources**
