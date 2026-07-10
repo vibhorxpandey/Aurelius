@@ -15,7 +15,7 @@ The final `twine upload` step is left to you because it is **public and irrevers
    ```ini
    [pypi]
      username = __token__
-     password = pypi-AgEI...your-token...
+     password = pypi-AgEI...your-pypi-token...
 
    [testpypi]
      username = __token__
