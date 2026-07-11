@@ -3,10 +3,15 @@ auditable provenance record — Aurelius's signature "shows its receipts" artifa
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from .scholarly import looks_like_citation, verify_citation
 from .search import web_search
+
+_REF_MARKER_RE = re.compile(r"^\s*(?:\[\d+\]|\(\d+\)|\d+[.\)]|[-*•])\s+")
+_HEADER_RE = re.compile(r"^\s*(references|bibliography|works cited)\s*:?\s*$", re.IGNORECASE)
+_YEAR_RE = re.compile(r"(19|20)\d{2}")
 
 DEFAULT_THRESHOLD = 1.0  # all-or-nothing by default: matches the zero-tolerance brand
 
@@ -144,3 +149,93 @@ def render_ledger_markdown(
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def split_references(text: str) -> List[str]:
+    """Split a References/Bibliography block into individual citation strings.
+
+    Handles numbered ([1], 1., (1)), bulleted (-, *), and blank-line-separated entries.
+    Keeps only entries that look like real citations (contain a 4-digit year).
+    """
+    lines = text.strip().splitlines()
+    if lines and _HEADER_RE.match(lines[0]):
+        lines = lines[1:]
+    body = "\n".join(lines).strip()
+
+    entries: List[str] = []
+    if any(_REF_MARKER_RE.match(l) for l in lines):
+        cur: List[str] = []
+        for l in lines:
+            if _REF_MARKER_RE.match(l):
+                if cur:
+                    entries.append(" ".join(cur).strip())
+                cur = [_REF_MARKER_RE.sub("", l).strip()]
+            elif l.strip():
+                cur.append(l.strip())
+        if cur:
+            entries.append(" ".join(cur).strip())
+    else:
+        chunks = re.split(r"\n\s*\n", body)
+        if len(chunks) > 1:
+            entries = [" ".join(c.split()) for c in chunks if c.strip()]
+        else:
+            entries = [l.strip() for l in lines if l.strip()]
+
+    return [e for e in entries if len(e) > 15 and _YEAR_RE.search(e)]
+
+
+def verify_bibliography(text: str, threshold: float = DEFAULT_THRESHOLD) -> Dict[str, Any]:
+    """Verify an entire References/Bibliography block at once.
+
+    Splits the text into individual citations, verifies each against the scholarly indexes,
+    and returns a scored ledger plus two actionable artifacts: `corrected_bibtex` (a clean,
+    DOI-backed BibTeX file for the entries that resolved) and `corrected_references` (the
+    authoritative citation strings). The "check and clean my whole paper's sources" workflow.
+
+    Returns {"ok": True, "count": int, "ledger": [...], "verification_score": float,
+             "counts": {...}, "markdown": str, "corrected_bibtex": str,
+             "corrected_references": [...]} — or {"ok": False, "error": ...} if no citations
+             were found in the text.
+    """
+    refs = split_references(text)
+    if not refs:
+        return {"ok": False, "error": "No citations found. Provide a References/Bibliography "
+                "block with one entry per line (numbered, bulleted, or blank-line separated)."}
+
+    ledger: List[Dict[str, Any]] = []
+    counts = {"verified": 0, "retracted": 0, "unverified": 0, "not_found": 0}
+    bibtex_entries: List[str] = []
+    corrected_refs: List[str] = []
+
+    for ref in refs:
+        r = verify_citation(ref)
+        counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
+        ledger.append({
+            "claim": ref,
+            "type": "citation",
+            "verdict": r["verdict"],
+            "confidence": r["confidence"],
+            "sources": [r["matched_work"]] if r.get("matched_work") else [],
+            "notes": r["notes"],
+            "corrected_citation": r.get("corrected_citation"),
+            "bibtex": r.get("bibtex"),
+        })
+        if r.get("bibtex") and r["verdict"] == "verified":
+            bibtex_entries.append(r["bibtex"])
+        if r.get("corrected_citation"):
+            corrected_refs.append(r["corrected_citation"])
+
+    counts["total"] = len(ledger)
+    score = counts["verified"] / counts["total"] if counts["total"] else 0.0
+    markdown = render_ledger_markdown(ledger, counts, score, threshold)
+
+    return {
+        "ok": True,
+        "count": len(ledger),
+        "ledger": ledger,
+        "verification_score": score,
+        "counts": counts,
+        "markdown": markdown,
+        "corrected_bibtex": "\n\n".join(bibtex_entries),
+        "corrected_references": corrected_refs,
+    }

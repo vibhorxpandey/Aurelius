@@ -149,6 +149,29 @@ rationalize past. A scholarly index can return several records for the same pape
 original, a retraction notice, clean-looking duplicates); Aurelius specifically resolves
 ties in favor of surfacing the retraction rather than picking whichever record looks cleanest.
 
+## Seeing it catch a *mis-attributed* citation
+
+A title match alone is not a verification. Aurelius corroborates the cited author and year
+against the matched record, so it catches the subtle case a title-only checker waves through:
+
+```python
+verify_citation("Okun, A. M. (1962). Potential GNP: Its Measurement and Significance.")
+```
+```json
+{
+  "verdict": "unverified",
+  "author_match": false,
+  "match_score": 1.0,
+  "matched_work": { "authors": ["Charles I. Plosser", "G. William Schwert"], "year": 1979 },
+  "notes": "Found a work with this title but different authors (found: Plosser, Schwert; cited: Okun) — likely not the paper you cited."
+}
+```
+
+The title matches perfectly (1.00), but the only indexed record with that title is a *1979*
+paper by *Plosser & Schwert* — not Okun's 1962 original. A title-only checker reports ✓;
+Aurelius reports the truth and hands back the `corrected_citation` for the record it actually
+found. When a citation carries a DOI or arXiv id, it's looked up directly for an exact match.
+
 ---
 
 ## Tools
@@ -159,8 +182,10 @@ ties in favor of surfacing the retraction rather than picking whichever record l
 | `get_research_policy()` | Return the accept/reject policy | — |
 | `draft_outline(topic)` | Standard academic (Markdown) outline scaffold | — |
 | `plan_paper_length(target_pages, …)` | Section-by-section word budget for long-form papers | — |
-| `verify_citation(citation)` | Verify against OpenAlex + Crossref — DOI-backed, retraction-aware | — (Tavily optional, fallback only) |
+| `verify_citation(citation)` | Verify against OpenAlex/Crossref/arXiv/Semantic Scholar — DOI-precise, retraction- & author-aware; returns a corrected citation + BibTeX | — (Tavily optional, fallback only) |
 | `verify_claims(claims)` | Batch-verify citations/claims into a scored Evidence Ledger | — (Tavily optional, fallback only) |
+| `verify_bibliography(text)` | Verify a whole References block; returns a scored ledger + cleaned BibTeX | — (Tavily optional, fallback only) |
+| `verify_stat(claim, …)` | Verify a statistic ('GDP grew 2.5% in 2023') against World Bank data | — (Tavily optional, fallback only) |
 | `web_search(query, …)` | Search the web for evidence about a factual claim | Tavily key |
 | `polish_prose(content, …)` | Style/readability pass on *already-verified* content | — (LLM key only if `use_llm=True`) |
 | `diagram_template(diagram_type, …)` | Mermaid scaffold: flowchart / architecture / sequence | — |

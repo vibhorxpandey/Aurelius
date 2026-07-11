@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from .tools import diagrams, drafting, latex, ledger, scholarly, screening, search, style
+from .tools import diagrams, drafting, latex, ledger, numeric, scholarly, screening, search, style
 from .autonomous.pipeline import run_autonomous_research
 
 mcp = FastMCP(
@@ -20,11 +20,13 @@ mcp = FastMCP(
         "(2) for long-form papers, call plan_paper_length first for a section-by-section "
         "word budget; (3) draft the paper yourself using draft_outline (or latex_outline "
         "for LaTeX) for structure; (4) for EVERY citation call verify_citation (checked "
-        "against OpenAlex/Crossref, retraction-aware) and for key claims call web_search, "
-        "or batch-verify a whole list at once with verify_claims; (5) remove or fix "
-        "anything the evidence does not support -- an is_retracted:true result is an "
-        "automatic reject regardless of anything else; (6) optionally call polish_prose "
-        "on the now-verified draft for readability (never before fact-checking); "
+        "against OpenAlex/Crossref/arXiv/Semantic Scholar, DOI-precise and retraction- and "
+        "author-aware), for a whole reference list call verify_bibliography, for key "
+        "statistics call verify_stat, and batch-verify mixed claims with verify_claims; "
+        "(5) remove or fix anything the evidence does not support -- an is_retracted:true "
+        "result is an automatic reject, and verify_citation returns a `corrected_citation` "
+        "to prefer when the authors/year don't match; (6) optionally call polish_prose on "
+        "the now-verified draft for readability (never before fact-checking); "
         "(7) save_draft (use append=True for long-form papers, section by section) and "
         "save_report. Use diagram_template for any flowchart/architecture/sequence "
         "diagram, embedded as a fenced ```mermaid block. Never present a citation you "
@@ -104,6 +106,29 @@ def verify_claims(claims: List[str]) -> Dict[str, Any]:
     scored evidence ledger (verification_score, per-item verdicts + sources) and a
     save_report-ready Markdown summary with unverified/retracted items struck through."""
     return ledger.verify_claims(claims)
+
+
+@mcp.tool()
+def verify_bibliography(text: str) -> Dict[str, Any]:
+    """Verify an entire References/Bibliography block at once. Splits it into individual
+    citations, verifies each (DOI-precise, retraction- and author-aware), and returns a
+    scored ledger plus a cleaned DOI-backed `corrected_bibtex` and `corrected_references`."""
+    return ledger.verify_bibliography(text)
+
+
+@mcp.tool()
+def verify_stat(
+    claim: str,
+    country: Optional[str] = None,
+    year: Optional[int] = None,
+    claimed_value: Optional[float] = None,
+    indicator: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Verify a numeric/statistical claim (e.g. 'US GDP grew 2.5% in 2023') against World
+    Bank primary data. Pass country/year/claimed_value (and optionally a World Bank
+    indicator code) for precision; falls back to web search if the data source is
+    unavailable. Returns verdict verified/contradicted/unverified with the actual value."""
+    return numeric.verify_stat(claim, country, year, claimed_value, indicator)
 
 
 # --- Style (post-verification only) ---------------------------------------------

@@ -41,13 +41,19 @@ if the user wants a LaTeX/.tex deliverable. Write the draft yourself. Rules:
 - The easiest way: collect every citation and load-bearing claim from the section you just
   wrote into a list and call `verify_claims([...])` once — it auto-routes citations to
   scholarly verification and factual claims to web search, and returns a scored ledger plus
-  a ready-to-save report.
+  a ready-to-save report. For a complete References list, call `verify_bibliography(text)`.
 - Or check items individually: `verify_citation("<full citation>")` for each citation
-  (checked against OpenAlex and Crossref, not just "a webpage mentioned it" — this also
-  recovers the real DOI/authors/venue) and `web_search("<claim>", academic_only=true)` for
-  each factual/statistical claim.
+  (checked against OpenAlex, Crossref, arXiv, and Semantic Scholar — DOI-precise when the
+  citation carries a DOI/arXiv id — and it recovers the real DOI/authors/venue).
 - **`is_retracted: true` is an automatic reject, full stop** — regardless of how well-cited
   or plausible the paper otherwise looks. Never cite a retracted work.
+- **`author_match: false` means it is probably NOT the paper you cited** — a same-titled work
+  by different authors. Treat that as unverified. `verify_citation` returns a
+  `corrected_citation` (and `bibtex`) built from authoritative metadata — prefer it, or fix
+  the citation, rather than keeping a mis-attributed one.
+- For **numeric/statistical claims** (e.g. "US GDP grew 2.5% in 2023"), call
+  `verify_stat(claim, country=..., year=..., claimed_value=...)` — it checks the number
+  against World Bank data and returns verified / contradicted / unverified with the actual value.
 - Remove or correct anything the evidence does not support. Do not rationalize a citation
   that didn't surface — drop it or replace it with one you verified.
 
