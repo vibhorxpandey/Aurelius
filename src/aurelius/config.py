@@ -25,6 +25,12 @@ def get_tavily_key() -> Optional[str]:
     return _first_env("TAVILY_API_KEY", "AURELIUS_TAVILY_API_KEY")
 
 
+def get_contact_email() -> Optional[str]:
+    """Optional contact email for Crossref's "polite pool" (faster, more reliable rate
+    limits). Harmless to leave unset — Crossref works fine without it."""
+    return _first_env("AURELIUS_CONTACT_EMAIL")
+
+
 def get_llm_key(provider: str) -> Optional[str]:
     """LLM key for autonomous mode. Only needed if you use `autonomous_research`.
 

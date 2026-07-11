@@ -1,7 +1,9 @@
-"""Web search and citation verification, backed by the Tavily API.
+"""General web search evidence, backed by the Tavily API.
 
-These are the heart of Aurelius's fact-checking: every claim or citation the model
-makes can be checked against live, reputable web sources instead of trusted blindly.
+For citation verification, see `scholarly.py` — it checks against real bibliographic
+indexes (OpenAlex, Crossref) rather than treating "a webpage mentioned it" as proof,
+and it's retraction-aware. This module remains the source of general factual-claim
+evidence, and is also `scholarly.py`'s fallback for citations that aren't indexed.
 """
 from __future__ import annotations
 
@@ -88,25 +90,3 @@ def web_search(query: str, max_results: int = 5, academic_only: bool = False) ->
     max_results = max(1, min(int(max_results), 10))
     domains = ACADEMIC_DOMAINS if academic_only else None
     return _tavily_search(query, max_results, domains, search_depth="advanced")
-
-
-def verify_citation(citation: str, max_results: int = 5) -> Dict[str, Any]:
-    """Check whether an academic citation actually exists in reputable sources.
-
-    Args:
-        citation: The citation text, e.g. "Okun, A. M. (1962). Potential GNP: Its Measurement and Significance".
-        max_results: Number of corroborating results to return.
-
-    Returns a dict with `found` (bool heuristic), `answer`, and `results`. The final
-    judgement should be made by the model reading the evidence, but `found` gives a
-    quick signal based on whether reputable sources surface the work.
-    """
-    query = f'Verify this academic paper exists: "{citation}"'
-    result = _tavily_search(query, max(1, min(int(max_results), 10)), ACADEMIC_DOMAINS, "advanced")
-    if not result.get("ok"):
-        return result
-    # Heuristic: consider it corroborated if at least one reputable result scores well.
-    corroborated = any((r.get("score") or 0) >= 0.5 for r in result.get("results", []))
-    result["found"] = bool(corroborated)
-    result["citation"] = citation
-    return result
