@@ -31,6 +31,11 @@ def get_contact_email() -> Optional[str]:
     return _first_env("AURELIUS_CONTACT_EMAIL")
 
 
+def get_semantic_scholar_key() -> Optional[str]:
+    """Optional Semantic Scholar API key (raises rate limits). The API works keyless too."""
+    return _first_env("SEMANTIC_SCHOLAR_API_KEY", "AURELIUS_SEMANTIC_SCHOLAR_API_KEY")
+
+
 def get_llm_key(provider: str) -> Optional[str]:
     """LLM key for autonomous mode. Only needed if you use `autonomous_research`.
 
