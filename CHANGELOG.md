@@ -3,6 +3,33 @@
 All notable changes to `aurelius-mcp` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0]
+
+Deeper, more precise verification (8 → 16 tools).
+
+### Fixed
+- **Citation matching no longer relies on title alone.** `verify_citation` now corroborates
+  the cited first-author surname and year against the matched record, so a same-titled work
+  by different authors is honestly flagged `unverified` instead of a false ✓. (This was a real
+  bug: "Okun, A. M. (1962). Potential GNP…" matched a 1979 Plosser & Schwert record and was
+  reported verified with high confidence.)
+- Extended the OpenAlex filter sanitizer to strip `?`/`*` (wildcard chars that caused HTTP 400
+  on titles ending in a question mark).
+
+### Added
+- **DOI / arXiv-id direct lookup** — when a citation carries an identifier, it's looked up
+  exactly (OpenAlex → Crossref by DOI; arXiv by id), skipping fuzzy title matching.
+- **Corrected citations** — `verify_citation` returns a `corrected_citation` and a `bibtex`
+  entry built from authoritative metadata, plus `author_match` / `year_match` flags.
+- **Broader coverage** — arXiv and Semantic Scholar added to the source chain, so preprints
+  and working papers that OpenAlex/Crossref miss now resolve.
+- **`verify_bibliography(text)`** — verify a whole References block at once; returns a scored
+  ledger, a cleaned `corrected_bibtex`, and `corrected_references`.
+- **`verify_stat(claim, …)`** — verify a numeric/statistical claim against World Bank primary
+  data (keyless), with a graceful web-search fallback; returns verified / contradicted /
+  unverified with the actual value.
+- Optional `SEMANTIC_SCHOLAR_API_KEY` (raises rate limits; the API works keyless).
+
 ## [0.2.0]
 
 Scholarly-grade verification and a much larger tool surface (8 → 14 tools).
