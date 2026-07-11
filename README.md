@@ -99,6 +99,21 @@ unemployment, and verify every citation."*
 
 ---
 
+## Seeing it catch a bad citation
+
+A real run on *"the historical correlation between GDP growth and unemployment (Okun's law)"*:
+Claude drafted the paper, then called `verify_citation` on every reference.
+
+| Citation | Verdict |
+|---|---|
+| Okun, A. M. (1962). *Potential GNP: Its Measurement and Significance.* | ✅ Verified — corroborated by arXiv and Federal Reserve sources |
+| Knotek, E. S. II (2007). *How Useful is Okun's Law?* | ✅ Verified — Federal Reserve Bank of Kansas City |
+| A third citation with a misattributed author | ✏️ Caught and corrected before the draft was finalized |
+
+Nothing unverifiable made it into the final draft. That's the whole point.
+
+---
+
 ## Tools
 
 | Tool | What it does | Needs |
@@ -112,7 +127,9 @@ unemployment, and verify every citation."*
 | `save_report(content)` | Save the verification report | — |
 | `autonomous_research(topic, model, …)` | Run the whole loop itself | LLM key |
 
-Outputs are written to `./aurelius_output/` (override with `AURELIUS_OUTPUT_DIR`).
+Outputs are written to `~/aurelius_output/` in your home directory (override with
+`AURELIUS_OUTPUT_DIR`) — never to the process's current working directory, since MCP
+clients often launch the server from a location you can't write to.
 
 ## The Claude skill
 
