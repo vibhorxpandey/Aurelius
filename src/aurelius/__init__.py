@@ -4,7 +4,11 @@ Aurelius gives any MCP-capable app (Claude, Gemini CLI, Cursor, and — via a re
 deployment — ChatGPT) a set of research + fact-checking tools:
 
 * screen a research topic against a restricted-domain policy,
-* search the web and verify citations against live sources (Tavily),
+* verify citations against real scholarly indexes (OpenAlex, Crossref) — retraction-aware,
+* batch-verify claims into a scored Evidence Ledger,
+* search the web for general factual evidence (Tavily),
+* polish already-verified prose, generate Mermaid diagrams, write LaTeX,
+* plan and save long-form (20-80+ page) papers section by section,
 * save drafts and verification reports.
 
 By default the **host app's own model** does the reasoning, so Aurelius needs no LLM
@@ -12,6 +16,6 @@ API key of its own (host-driven mode). An optional **autonomous mode** runs the 
 draft -> fact-check -> revise loop internally using a key you supply.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = ["__version__"]

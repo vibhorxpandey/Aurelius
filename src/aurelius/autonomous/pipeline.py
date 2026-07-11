@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from ..tools.drafting import save_draft, save_report
 from ..tools.screening import get_research_policy
-from ..tools.search import verify_citation, web_search
+from ..tools.scholarly import looks_like_citation, verify_citation
+from ..tools.search import web_search
 from .llm import complete
 
 _SCREEN_SYSTEM = (
@@ -84,8 +85,7 @@ def _gather_evidence(draft: str, model, provider, api_key) -> str:
 
     evidence_blocks = []
     for q in queries:
-        is_citation = any(ch.isdigit() for ch in q) and ("(" in q or "et al" in q.lower() or "," in q)
-        res = verify_citation(q) if is_citation else web_search(q, max_results=3, academic_only=False)
+        res = verify_citation(q) if looks_like_citation(q) else web_search(q, max_results=3, academic_only=False)
         evidence_blocks.append(f"### Query: {q}\n{json.dumps(res)[:1500]}")
     return "\n\n".join(evidence_blocks) if evidence_blocks else "(no queries extracted)"
 
