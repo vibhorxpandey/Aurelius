@@ -51,6 +51,35 @@ def get_llm_key(provider: str) -> Optional[str]:
     return None
 
 
+def get_proof_hmac_secret() -> Optional[str]:
+    """Optional shared secret for HMAC-signing Proof-of-Rigor bundles (Phase 3).
+
+    If unset, Aurelius signs with a local ed25519 key when `cryptography` is available, or
+    falls back to a content hash only. The content hash alone already makes the proof
+    tamper-evident; a signature adds authenticity."""
+    return _first_env("AURELIUS_PROOF_HMAC_SECRET")
+
+
+def get_pinata_jwt() -> Optional[str]:
+    """Optional Pinata JWT for pinning Proof-of-Rigor bundles to IPFS (Phase 3). Without it,
+    proofs are stored locally only."""
+    return _first_env("PINATA_JWT", "AURELIUS_PINATA_JWT")
+
+
+def get_chain_config() -> dict:
+    """Optional blockchain-anchoring config (Phase 3). Anchoring is skipped unless BOTH an
+    RPC URL and a funded private key are set (and the `web3` extra is installed).
+
+    Returns {"rpc": str|None, "private_key": str|None, "chain_id": int|None}.
+    """
+    chain_id = _first_env("AURELIUS_CHAIN_ID")
+    return {
+        "rpc": _first_env("AURELIUS_CHAIN_RPC", "AURELIUS_CHAIN_RPC_URL"),
+        "private_key": _first_env("AURELIUS_CHAIN_PRIVATE_KEY"),
+        "chain_id": int(chain_id) if chain_id and chain_id.isdigit() else None,
+    }
+
+
 def get_output_dir() -> Path:
     """Directory where drafts and reports are written.
 
