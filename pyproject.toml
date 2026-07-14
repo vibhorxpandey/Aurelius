@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # The bare name "aurelius" is already claimed on PyPI, so the distribution ships as
 # "aurelius-mcp". The import package and CLI command are still `aurelius`.
 name = "aurelius-mcp"
-version = "0.4.0"
+version = "0.5.0"
 description = "Aurelius — a fact-checked research MCP server. Bring rigorous, web-verified academic drafting to Claude, ChatGPT, Gemini and any MCP-capable app."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,6 +29,9 @@ dependencies = [
 # Autonomous (BYO-key) mode works over plain REST via httpx, so no heavy SDKs are
 # required. These extras are only convenience pins for users who want them.
 dev = ["pytest>=8", "ruff>=0.6"]
+# Phase 3 blockchain anchoring is opt-in: the on-chain proof anchor needs web3/eth-account.
+# Everything else (content hash, ed25519/HMAC signing, IPFS pinning via httpx) is built in.
+chain = ["web3>=6.0", "eth-account>=0.10"]
 
 [project.scripts]
 # `aurelius`         -> launch the MCP server (stdio)
