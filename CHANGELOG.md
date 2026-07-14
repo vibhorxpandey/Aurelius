@@ -3,6 +3,33 @@
 All notable changes to `aurelius-mcp` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0]
+
+Phase 1 of the [architecture roadmap](ARCHITECTURE.md): an orchestration layer that runs a
+multi-stage agent swarm instead of a single linear loop — built in-house, with **no new
+runtime dependencies** (still just `mcp` + `httpx`; no LangGraph/LangChain).
+
+### Added
+- **`autonomous_research_graph(topic, …)` MCP tool** and **`aurelius-research … --graph`
+  CLI flag** — run a 16-stage research DAG (literature mining → parallel hypothesis swarm →
+  feasibility screening → experiment design/code → citation verification → adversarial review
+  → drafting → LaTeX → proof-of-rigor), logging every agent action to an audit trail and
+  checkpointing each stage under `<output_dir>/sessions/`.
+- **In-house DAG engine** (`orchestration/graph.py`) with conditional routing, human-in-the-
+  loop breakpoints, and JSON checkpoint/resume — a dependency-free stand-in for LangGraph.
+- **Agent framework** (`agents/`): a `ResearchAgent` base plus implemented hypothesis,
+  execution, verification, and publication agents. `CitationVerifierAgent` reuses the existing
+  retraction-aware `verify_claims`; later-phase stages (sandbox, p-hacking audit, preprint
+  publishing, patent-freedom, IPFS versioning) are honest no-op placeholders.
+- **Agent swarm coordinator** (`orchestration/swarm.py`) for parallel hypothesis generation,
+  and a **workflow manager** (`orchestration/workflow_manager.py`) for sessions/checkpoints.
+- 20 new tests (engine, agents with a mocked LLM, swarm merge semantics, full-DAG dry run).
+
+### Notes
+- The existing linear `autonomous_research` tool and all fact-checking tools are unchanged and
+  fully backward-compatible. The reasoning agents need an LLM key; citation verification stays
+  keyless and degrades gracefully when no key is configured.
+
 ## [0.3.0]
 
 Deeper, more precise verification (8 → 16 tools).
