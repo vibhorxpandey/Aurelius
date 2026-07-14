@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/aurelius-banner.jpg" alt="Aurelius — a fact-checked research MCP server" width="100%">
+</p>
+
 # Aurelius
 
 [![PyPI version](https://img.shields.io/pypi/v/aurelius-mcp.svg)](https://pypi.org/project/aurelius-mcp/)
