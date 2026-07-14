@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .tools import diagrams, drafting, latex, ledger, numeric, scholarly, screening, search, style
 from .autonomous.pipeline import run_autonomous_research
+from .orchestration.workflow_manager import run_research_graph
 
 mcp = FastMCP(
     "Aurelius",
@@ -184,6 +185,30 @@ def autonomous_research(
     its own model instead of the host app's model. May take a few minutes.
     """
     return run_autonomous_research(topic, model=model, provider=provider, max_rounds=max_rounds)
+
+
+@mcp.tool()
+def autonomous_research_graph(
+    topic: str,
+    model: str = "gpt-4o-mini-2024-07-18",
+    provider: Optional[str] = None,
+    breakpoints: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Run the multi-stage research DAG (agent swarm) instead of the linear loop.
+
+    Chains specialized agents — literature mining, a parallel hypothesis swarm, feasibility
+    screening, experiment design/code generation, citation verification (reusing the
+    retraction-aware verifier), adversarial review, drafting, LaTeX, and a proof-of-rigor
+    attestation — logging every agent action to an audit trail and checkpointing each stage.
+
+    Requires an LLM API key with quota for the reasoning agents (OPENAI_API_KEY /
+    ANTHROPIC_API_KEY / GOOGLE_API_KEY); citation verification itself is keyless. Later-phase
+    stages (sandbox execution, p-hacking audit, preprint publishing) are honest no-op
+    placeholders. Optionally pass `breakpoints` (stage names) to pause for human approval.
+
+    Returns {status, session_id, checkpoint, final_state, audit_trail}.
+    """
+    return run_research_graph(topic, model=model, provider=provider, breakpoints=breakpoints)
 
 
 def main() -> None:

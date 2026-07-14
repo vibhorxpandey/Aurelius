@@ -8,28 +8,58 @@ This document outlines the complete architecture, development phases, and implem
 
 ---
 
-## Current State (Phase 0) ✅
+## Current State ✅
 
-**What exists:**
-- MCP server for citation verification (OpenAlex, Crossref, Tavily)
+**What exists (shipped in 0.3.0):**
+- MCP server with ~16 research + fact-checking tools (OpenAlex, Crossref, arXiv, Semantic
+  Scholar, World Bank, Tavily) — DOI-precise, retraction- and author-aware
 - Host-driven mode (uses Claude/Gemini's models, no LLM API key needed)
-- Basic bibliography verification & Evidence Ledger concept
+- Evidence Ledger, bibliography verification, numeric/stat checking, LaTeX + diagram scaffolds
+- A working *linear* autonomous pipeline (`screen → draft → gather evidence → check → revise`)
+- **Phase 1 orchestration layer (0.4.0):** a lightweight in-house DAG + agent swarm — see
+  the banner in the Phase 1 section below
 - Published on PyPI as `aurelius-mcp`
 
-**Repo structure:**
+**Actual repo structure** (the doc originally sketched an `aurelius/mcp_server/…` layout; the
+real package lives under `src/aurelius/…` per hatchling `packages = ["src/aurelius"]`):
 ```
-aurelius/
-├── mcp_server/
-│   ├── server.py
-│   └── tools/
-│       ├── citation_verifier.py
-│       ├── web_search.py
-│       └── claim_verifier.py
+src/aurelius/
+├── server.py               # MCP server (stdio) — registers all tools
+├── cli.py                  # `aurelius-research` CLI (add --graph for the DAG)
+├── config.py               # key/env + output-dir resolution
+├── autonomous/             # linear pipeline + SDK-free multi-provider LLM client
+│   ├── pipeline.py
+│   └── llm.py
+├── tools/                  # screening, drafting, scholarly, ledger, numeric, search,
+│                           #   style, latex, diagrams
+├── orchestration/          # Phase 1 (NEW): graph engine, swarm, research graph, manager
+├── agents/                 # Phase 1 (NEW): the agent swarm
+└── tests/
 ```
 
 ---
 
-## Phase 1: Orchestration Layer & Agent Swarms (Next 1-2 months)
+## Phase 1: Orchestration Layer & Agent Swarms ✅ IMPLEMENTED (0.4.0)
+
+> **Implementation note — read this before the code snippets below.** Phase 1 shipped, but
+> **without LangGraph or LangChain**. To keep Aurelius's install light (`mcp` + `httpx` only)
+> and preserve the SDK-free, multi-provider LLM client in `autonomous/llm.py`, the DAG and
+> agent framework are a small in-house engine. The LangGraph/LangChain snippets in this
+> section are the *original design sketch*; the shipped code maps to them as follows:
+>
+> | Design sketch (below)                    | Shipped module (in-house)                          |
+> |------------------------------------------|----------------------------------------------------|
+> | `StateGraph` / `create_research_graph()` | `orchestration/graph.py` (`Graph`) + `orchestration/research_graph.py` (`build_research_graph`) |
+> | `ResearchState` TypedDict                | `orchestration/state.py`                            |
+> | `ResearchAgent` (LangChain tools/model)  | `agents/base.py` — `model` is a model-name string used with `llm.complete`, no LangChain |
+> | `AgentSwarmCoordinator`                  | `orchestration/swarm.py`                            |
+> | `ResearchWorkflowManager` / MemorySaver  | `orchestration/workflow_manager.py` + JSON checkpoints under `<output_dir>/sessions/` |
+> | `autonomous_research` MCP tool           | `autonomous_research_graph` tool (linear `autonomous_research` kept for back-compat) |
+>
+> Load-bearing agents are fully implemented and reuse the existing tools (notably
+> `CitationVerifierAgent` → `ledger.verify_claims`). Later-phase stages (sandbox execution,
+> p-hacking audit, preprint publishing, patent-freedom, IPFS versioning) are **honest
+> placeholders** (`agents/placeholders.py`) that pass state through and log a `skipped` entry.
 
 ### Goals
 - Build LangGraph-based DAG for end-to-end research workflows
@@ -514,118 +544,60 @@ def test_agent_swarm_parallel_execution():
 
 ---
 
-## Project Structure (Phase 1)
+## Project Structure (Phase 1 — as shipped)
 
 ```
-aurelius/
-├── __init__.py
-├── pyproject.toml
-├── README.md
-├── ARCHITECTURE.md (THIS FILE)
-│
-├── mcp_server/
-│   ├── __init__.py
-│   ├── server.py                          # (existing)
-│   ├── autonomous_mode.py                 # (NEW) autonomous_research tool
-│   └── tools/
-│       ├── citation_verifier.py           # (existing)
-│       ├── web_search.py                  # (existing)
-│       └── claim_verifier.py              # (existing)
+src/aurelius/
+├── server.py                              # + autonomous_research_graph tool
+├── cli.py                                 # + --graph flag
+├── autonomous/{pipeline.py, llm.py}       # existing linear mode (reused by agents)
+├── tools/                                 # existing tools (reused by agents)
 │
 ├── orchestration/
-│   ├── __init__.py
-│   ├── research_orchestrator.py           # (NEW) Main LangGraph DAG
-│   ├── agent_swarm.py                     # (NEW) Swarm coordinator
-│   └── workflow_manager.py                # (NEW) High-level orchestrator
+│   ├── __init__.py                        # light init (state + graph only; see note)
+│   ├── state.py                           # ResearchState TypedDict + audit helpers
+│   ├── graph.py                           # in-house DAG engine (replaces LangGraph)
+│   ├── swarm.py                           # AgentSwarmCoordinator (ThreadPoolExecutor)
+│   ├── research_graph.py                  # build_research_graph() — the 16-stage DAG
+│   └── workflow_manager.py                # sessions, checkpoints, resume, run_research_graph()
 │
 ├── agents/
-│   ├── __init__.py
-│   ├── base_agent.py                      # (NEW) Base class
-│   │
-│   ├── hypothesis_generation/
-│   │   ├── __init__.py
-│   │   ├── literature_miner_agent.py      # (NEW)
-│   │   ├── pattern_discovery_agent.py     # (NEW)
-│   │   ├── theory_generator_agent.py      # (NEW) Tree-of-Thoughts
-│   │   └── hypothesis_validator_agent.py  # (NEW)
-│   │
-│   ├── research_execution/
-│   │   ├── __init__.py
-│   │   ├── experiment_designer_agent.py   # (NEW)
-│   │   ├── code_generator_agent.py        # (NEW)
-│   │   ├── sandbox_executor_agent.py      # (NEW) Placeholder
-│   │   └── result_aggregator_agent.py     # (NEW)
-│   │
-│   ├── verification/
-│   │   ├── __init__.py
-│   │   ├── methodology_auditor_agent.py   # (NEW) Placeholder
-│   │   ├── citation_verifier_agent.py     # (NEW) Wraps existing tools
-│   │   ├── adversarial_reviewer_agent.py  # (NEW) Placeholder
-│   │   └── compliance_checker_agent.py    # (NEW) Placeholder
-│   │
-│   └── publication/
-│       ├── __init__.py
-│       ├── latex_formatter_agent.py       # (NEW) Placeholder
-│       ├── preprint_publisher_agent.py    # (NEW) Placeholder
-│       ├── patent_freedom_agent.py        # (NEW) Placeholder
-│       └── living_doc_versioner_agent.py  # (NEW) Placeholder
+│   ├── base.py                            # ResearchAgent ABC + PlaceholderAgent
+│   ├── placeholders.py                    # honest Phase 2-5 no-op agents
+│   ├── hypothesis/                        # literature_miner, pattern_discovery,
+│   │                                      #   theory_generator, hypothesis_validator
+│   ├── execution/                         # experiment_designer, code_generator
+│   ├── verification/                      # citation_verifier (wraps ledger), adversarial_reviewer
+│   └── publication/                       # draft_paper, latex_formatter, proof_of_rigor
 │
-├── tests/
-│   ├── __init__.py
-│   ├── test_orchestration.py              # (NEW)
-│   ├── test_agent_swarm.py                # (NEW)
-│   └── test_workflow_manager.py           # (NEW)
-│
-└── utils/
-    ├── __init__.py
-    └── state_management.py                # (NEW) State serialization, audit trails
+└── tests/
+    ├── test_graph.py                      # engine: order, checkpoint, breakpoint/resume
+    ├── test_agents.py                     # agents with mocked LLM (no key)
+    ├── test_swarm.py                      # parallel merge semantics
+    └── test_workflow_manager.py           # full DAG dry run + rejection + breakpoint
 ```
 
 ---
 
-## Implementation Checklist (Phase 1)
+## Implementation Checklist (Phase 1) — ✅ complete
 
-- [ ] **Week 1: Foundation**
-  - [ ] Create `orchestration/research_orchestrator.py` with LangGraph DAG structure
-  - [ ] Implement `agents/base_agent.py` base class
-  - [ ] Set up agent swarm coordinator
-
-- [ ] **Week 2: Hypothesis Generation Agents**
-  - [ ] Implement `LiteratureMinerAgent` (OpenAlex/Crossref search)
-  - [ ] Implement `PatternDiscoveryAgent` (gap analysis)
-  - [ ] Implement `TheoryGeneratorAgent` (Tree-of-Thoughts)
-  - [ ] Implement `HypothesisValidatorAgent` (feasibility screening)
-
-- [ ] **Week 3: Execution & Verification Scaffolding**
-  - [ ] Implement `ExperimentDesignerAgent`
-  - [ ] Implement `CodeGeneratorAgent`
-  - [ ] Create placeholder agents for other stages
-  - [ ] Wire up existing citation/claim verification tools
-
-- [ ] **Week 4: Integration & Testing**
-  - [ ] Add `autonomous_research` MCP tool
-  - [ ] Implement workflow manager with state checkpointing
-  - [ ] Write comprehensive tests
-  - [ ] Document API and usage examples
+- [x] **Foundation:** `orchestration/state.py`, in-house `orchestration/graph.py` DAG engine,
+  `agents/base.py` base class, `orchestration/swarm.py` coordinator
+- [x] **Hypothesis agents:** `LiteratureMinerAgent`, `PatternDiscoveryAgent`,
+  `TheoryGeneratorAgent` (Tree-of-Thoughts), `HypothesisValidatorAgent` (reuses `screening`)
+- [x] **Execution & verification:** `ExperimentDesignerAgent`, `CodeGeneratorAgent`,
+  `CitationVerifierAgent` (wraps `ledger.verify_claims`), `AdversarialReviewerAgent`;
+  honest placeholders for sandbox / methodology / compliance / publishing / patent / IPFS
+- [x] **Integration & testing:** `autonomous_research_graph` MCP tool + `--graph` CLI flag,
+  `ResearchWorkflowManager` with JSON checkpointing, 20 passing tests, docs
 
 ---
 
-## Dependencies (Phase 1)
+## Dependencies (Phase 1) — none added
 
-```toml
-[project.optional-dependencies]
-orchestration = [
-    "langgraph>=0.1.0",
-    "langchain>=0.1.0",
-    "langchain-anthropic>=0.1.0",
-    "langchain-openai>=0.1.0"
-]
-
-agents = [
-    "tenacity>=8.2.0",  # Retry logic
-    "pydantic>=2.0.0",  # State validation
-]
-```
+Phase 1 deliberately added **no** runtime dependencies. The DAG engine is standard-library
+only; agents call the existing `autonomous/llm.py` (plain `httpx`) rather than LangChain.
+Runtime install stays `mcp` + `httpx`; tests use `pytest` (already in the `dev` extra).
 
 ---
 
@@ -671,25 +643,35 @@ agents = [
 ## Running Phase 1
 
 ```bash
-# Install with orchestration dependencies
-pip install -e ".[orchestration]"
+# Editable install (no extra dependencies needed)
+pip install -e ".[dev]"
 
-# Test orchestrator
-pytest aurelius/tests/test_orchestration.py -v
+# Run the orchestration test suite
+python -m pytest src/aurelius/tests -q
 
-# Run autonomous research via Claude
-# (Once MCP server integrates autonomous_research tool)
+# Run the multi-stage agent DAG from the terminal (needs an LLM key for the reasoning
+# agents; citation verification is keyless)
+aurelius-research "Effect of sleep duration on reaction time" --graph
+
+# Or via any MCP client: call the `autonomous_research_graph` tool.
 ```
+
+**Next Step:** Phase 2 — the containerized code sandbox. Replace the
+`sandbox_executor` / `methodology_auditor` placeholders in `agents/placeholders.py` with
+real agents; no graph rewiring required.
 
 ---
 
 ## References
 
-- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [OpenAlex API](https://docs.openalex.org)
 - [Crossref API](https://github.com/CrossRef/rest-api-doc)
 - [Agent Design Patterns](https://lilianweng.github.io/posts/2023-06-23-agent/)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/) — the original design
+  reference; Phase 1 uses an in-house engine instead (see the Phase 1 implementation note)
 
 ---
 
-**Next Step:** Begin Phase 1 implementation on branch `feat/orchestration-layer`
+**Status:** Phase 1 (orchestration layer & agent swarm) shipped in 0.4.0 — in-house engine,
+no LangGraph/LangChain, backward-compatible with the existing MCP server and linear pipeline.
+**Next:** Phase 2 (containerized code sandbox).

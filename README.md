@@ -193,7 +193,8 @@ found. When a citation carries a DOI or arXiv id, it's looked up directly for an
 | `save_draft(content, filename, append)` | Save (or append to) the Markdown draft | — |
 | `save_latex(content, filename)` | Save `.tex` / `.bib` source | — |
 | `save_report(content)` | Save the verification report | — |
-| `autonomous_research(topic, model, …)` | Run the whole loop itself | LLM key |
+| `autonomous_research(topic, model, …)` | Run the whole linear loop itself | LLM key |
+| `autonomous_research_graph(topic, …)` | Run the multi-stage **agent DAG** (orchestration layer) — audit-trailed, checkpointed | LLM key (verification stays keyless) |
 
 Outputs are written to `~/aurelius_output/` in your home directory (override with
 `AURELIUS_OUTPUT_DIR`) — never to the process's current working directory, since MCP
@@ -231,6 +232,24 @@ aurelius-research "Health effects of microplastics in drinking water" --model gp
 
 Provider is auto-detected from the model name (`gpt-*` → OpenAI, `claude-*` → Anthropic,
 `gemini-*` → Google).
+
+### Orchestration mode — the multi-stage agent DAG (`--graph`)
+
+Beyond the linear loop, Aurelius can run a **staged research DAG driven by a swarm of
+specialized agents** (literature mining → a parallel hypothesis swarm → feasibility screening
+→ experiment design/code → citation verification → adversarial review → drafting → LaTeX →
+proof-of-rigor). Every agent action is logged to an audit trail and each stage is
+checkpointed under `~/aurelius_output/sessions/`, so a run is fully inspectable and resumable.
+
+```bash
+aurelius-research "Effect of sleep duration on reaction time" --graph
+```
+
+Or call the `autonomous_research_graph` MCP tool from any client. It's built in-house — **no
+LangGraph/LangChain, no new dependencies** — reusing the same retraction-aware citation
+verification as the rest of Aurelius. Later-phase stages (sandboxed execution, p-hacking
+audit, preprint publishing) are honest placeholders today; see [`ARCHITECTURE.md`](ARCHITECTURE.md)
+for the full roadmap.
 
 ---
 
