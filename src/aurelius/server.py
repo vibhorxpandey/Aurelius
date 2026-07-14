@@ -193,22 +193,30 @@ def autonomous_research_graph(
     model: str = "gpt-4o-mini-2024-07-18",
     provider: Optional[str] = None,
     breakpoints: Optional[List[str]] = None,
+    enable_sandbox: bool = False,
 ) -> Dict[str, Any]:
     """Run the multi-stage research DAG (agent swarm) instead of the linear loop.
 
     Chains specialized agents — literature mining, a parallel hypothesis swarm, feasibility
-    screening, experiment design/code generation, citation verification (reusing the
-    retraction-aware verifier), adversarial review, drafting, LaTeX, and a proof-of-rigor
-    attestation — logging every agent action to an audit trail and checkpointing each stage.
+    screening, experiment design/code generation, a hardened sandbox + static methodology
+    (p-hacking/data-dredging) audit, citation verification (reusing the retraction-aware
+    verifier), adversarial review, drafting, LaTeX, and a signed cryptographic
+    proof-of-rigor attestation (SHA-256 content hash + signature, optional IPFS/on-chain
+    anchoring) — logging every agent action to an audit trail and checkpointing each stage.
 
     Requires an LLM API key with quota for the reasoning agents (OPENAI_API_KEY /
-    ANTHROPIC_API_KEY / GOOGLE_API_KEY); citation verification itself is keyless. Later-phase
-    stages (sandbox execution, p-hacking audit, preprint publishing) are honest no-op
+    ANTHROPIC_API_KEY / GOOGLE_API_KEY); citation verification and proof signing are keyless.
+    Set `enable_sandbox=True` to actually execute the generated analysis code in a hardened,
+    network-less Docker container (off by default since the code is model-written; requires
+    Docker). `check_compliance`, `publish_preprints`, and `patent_freedom` remain honest
     placeholders. Optionally pass `breakpoints` (stage names) to pause for human approval.
 
     Returns {status, session_id, checkpoint, final_state, audit_trail}.
     """
-    return run_research_graph(topic, model=model, provider=provider, breakpoints=breakpoints)
+    return run_research_graph(
+        topic, model=model, provider=provider, breakpoints=breakpoints,
+        enable_sandbox=enable_sandbox,
+    )
 
 
 def main() -> None:
