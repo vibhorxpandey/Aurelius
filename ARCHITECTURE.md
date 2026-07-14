@@ -613,15 +613,29 @@ Runtime install stays `mcp` + `httpx`; tests use `pytest` (already in the `dev` 
 
 ## Future Phases
 
-### Phase 2: Containerized Code Sandbox
-- Docker isolation for experiment execution
-- P-hacking & data-dredging detection
-- Methodology validation & reproducibility checks
+### Phase 2: Containerized Code Sandbox ✅ IMPLEMENTED (0.5.0)
+- **Docker isolation for experiment execution** — `sandbox/docker_runner.py`: hardened
+  container (`--network none`, CPU/mem/pids caps, read-only fs, `--cap-drop ALL`, non-root,
+  wall-clock timeout), shelled out via the `docker` CLI (no new dep). **Opt-in** per run
+  (`--sandbox` / `enable_sandbox=True`) because the code is model-written; degrades to an
+  honest skip when Docker is absent. → `SandboxExecutorAgent`, `ResultAggregatorAgent`.
+- **P-hacking & data-dredging detection** — `sandbox/methodology.py`: dependency-free static
+  auditor (uncorrected multiple comparisons, missing seed, post-hoc outlier removal, optional
+  stopping, HARKing, selective reporting) with a risk score. → `MethodologyAuditorAgent`.
+- Still open: full reproducibility re-run harness; `compliance_checker` remains a placeholder.
 
-### Phase 3: Evidence Ledger & Immutable Proof
-- IPFS-backed evidence storage
-- Blockchain anchoring (Ethereum/Polygon)
-- Cryptographic Proof-of-Rigor signatures
+### Phase 3: Evidence Ledger & Immutable Proof ✅ IMPLEMENTED (0.5.0)
+- **Cryptographic Proof-of-Rigor signatures** — `proof/rigor.py`: SHA-256 content hash of the
+  canonicalized ledger + audit trail (tamper-evident) + a signature (HMAC-SHA256, or ed25519
+  via `cryptography`, or hash-only), with `verify_proof()`. → upgraded `ProofOfRigorAgent`.
+- **IPFS-backed evidence storage** — `proof/ipfs.py`: optional Pinata pinning over httpx
+  (graceful no-op without `PINATA_JWT`).
+- **Blockchain anchoring (Ethereum/Polygon)** — `proof/anchor.py`: always writes a local
+  append-only anchor log; optionally anchors the hash on an EVM chain via lazy-imported `web3`
+  (the `[chain]` extra) + wallet config. `LivingDocVersionerAgent` keeps an append-only,
+  content-hash-keyed version history.
+- Caveat: the on-chain path sends a real gas-costing tx and is unexercised in CI — validate on
+  a testnet first.
 
 ### Phase 4: Publication Pipeline
 - LaTeX template formatting (journal-specific)
@@ -672,6 +686,7 @@ real agents; no graph rewiring required.
 
 ---
 
-**Status:** Phase 1 (orchestration layer & agent swarm) shipped in 0.4.0 — in-house engine,
-no LangGraph/LangChain, backward-compatible with the existing MCP server and linear pipeline.
-**Next:** Phase 2 (containerized code sandbox).
+**Status:** Phase 1 (orchestration, 0.4.0) + Phases 2 & 3 (Docker sandbox + p-hacking audit +
+cryptographic Proof-of-Rigor, 0.5.0) shipped — in-house, runtime install still `mcp` + `httpx`
+(on-chain anchoring is an opt-in `[chain]` extra), backward-compatible throughout.
+**Next:** Phase 4 (publication pipeline — preprint submission), Phase 5 (DeSci / patent-freedom).

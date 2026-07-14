@@ -246,10 +246,27 @@ aurelius-research "Effect of sleep duration on reaction time" --graph
 ```
 
 Or call the `autonomous_research_graph` MCP tool from any client. It's built in-house — **no
-LangGraph/LangChain, no new dependencies** — reusing the same retraction-aware citation
-verification as the rest of Aurelius. Later-phase stages (sandboxed execution, p-hacking
-audit, preprint publishing) are honest placeholders today; see [`ARCHITECTURE.md`](ARCHITECTURE.md)
-for the full roadmap.
+LangGraph/LangChain** — reusing the same retraction-aware citation verification as the rest of
+Aurelius.
+
+**Code sandbox & p-hacking audit (Phase 2).** The DAG statically audits the generated analysis
+code for questionable-research-practice signals (uncorrected multiple comparisons, missing
+random seed, post-hoc outlier removal, optional stopping, HARKing, selective reporting) and
+reports a risk score. Add `--sandbox` to *also execute* that code in a hardened, network-less
+Docker container (CPU/mem/pids caps, read-only fs, dropped capabilities, non-root, timeout) —
+opt-in because the code is model-written, and a graceful skip if Docker isn't present:
+```bash
+aurelius-research "your topic" --graph --sandbox
+```
+
+**Cryptographic Proof-of-Rigor (Phase 3).** Each run emits a signed, tamper-evident proof
+bundle: a SHA-256 content hash of the evidence ledger + full audit trail, signed with ed25519
+(or HMAC if you set `AURELIUS_PROOF_HMAC_SECRET`), written to `~/aurelius_output/proofs/` and
+independently checkable with `aurelius.proof.verify_proof(...)`. Optional [IPFS pinning](https://pinata.cloud)
+(set `PINATA_JWT`) and optional on-chain anchoring (`pip install aurelius-mcp[chain]` + set
+`AURELIUS_CHAIN_RPC` / `AURELIUS_CHAIN_PRIVATE_KEY`) layer on top; both are graceful no-ops when
+unconfigured. `check_compliance`, `publish_preprints`, and `patent_freedom` remain honest
+placeholders — see [`ARCHITECTURE.md`](ARCHITECTURE.md) for the roadmap.
 
 ---
 

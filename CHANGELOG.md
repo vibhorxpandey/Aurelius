@@ -3,6 +3,43 @@
 All notable changes to `aurelius-mcp` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0]
+
+Phases 2 & 3 of the [architecture roadmap](ARCHITECTURE.md): a containerized code sandbox with
+p-hacking detection, and a cryptographic Proof-of-Rigor. Runtime install stays `mcp` + `httpx`;
+on-chain anchoring is an opt-in `[chain]` extra.
+
+### Added — Phase 2 (sandbox + methodology)
+- **Static methodology auditor** (`sandbox/methodology.py`, dependency-free): flags p-hacking /
+  data-dredging signals — uncorrected multiple comparisons, missing random seed, post-hoc
+  outlier removal, optional stopping, HARKing, selective reporting — with a risk score. Wired
+  as the real `MethodologyAuditorAgent` (replaces the placeholder).
+- **Hardened Docker sandbox** (`sandbox/docker_runner.py`): executes the generated analysis
+  code in a locked-down container (`--network none`, CPU/mem/pids caps, read-only fs,
+  `--cap-drop ALL`, non-root, wall-clock timeout). Shells out to the `docker` CLI — no new
+  dependency. **Opt-in per run** (`--sandbox` / `enable_sandbox=True`) since the code is
+  model-written; degrades to an honest skip when Docker is absent. Plus a `ResultAggregatorAgent`.
+
+### Added — Phase 3 (cryptographic proof)
+- **Signed Proof-of-Rigor** (`proof/rigor.py`): canonicalizes the evidence ledger + audit
+  trail, produces a SHA-256 **content hash** (tamper-evident, content-addressed) and a
+  **signature** — HMAC-SHA256 if `AURELIUS_PROOF_HMAC_SECRET` is set, else ed25519 via
+  `cryptography` if available, else hash-only. `verify_proof()` re-checks hash + signature.
+- **Optional IPFS pinning** (`proof/ipfs.py`, Pinata over httpx) and **optional blockchain
+  anchoring** (`proof/anchor.py`: always writes a local append-only anchor log; additionally
+  anchors the hash on an EVM chain when `web3` + `AURELIUS_CHAIN_RPC`/`AURELIUS_CHAIN_PRIVATE_KEY`
+  are configured). `ProofOfRigorAgent` upgraded from a text summary to the full signed bundle;
+  real `LivingDocVersionerAgent` keeps an append-only, content-hash-keyed version history.
+
+### Fixed
+- Proof payload now deep-copies the audit trail so the attestation snapshots state at
+  build time (the agent's own post-signing audit-log append no longer invalidates the hash).
+
+### Notes
+- New optional extra: `pip install aurelius-mcp[chain]` for on-chain anchoring. The on-chain
+  path sends a real gas-costing transaction and is left unexercised in CI — validate on a
+  testnet (e.g. Polygon Amoy) before mainnet. 39 tests pass.
+
 ## [0.4.0]
 
 Phase 1 of the [architecture roadmap](ARCHITECTURE.md): an orchestration layer that runs a
