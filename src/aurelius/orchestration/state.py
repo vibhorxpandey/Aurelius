@@ -27,12 +27,15 @@ class ResearchState(TypedDict, total=False):
     experiment_design: str
     experiment_code: str
     sandbox_result: Dict[str, Any]
+    methodology_report: Dict[str, Any]
     evidence_ledger: List[Dict[str, Any]]
     verification_report: Dict[str, Any]
     adversarial_review: str
     paper_draft: str
     latex: str
     proof_of_rigor: str
+    proof: Dict[str, Any]
+    living_doc: Dict[str, Any]
     publication_urls: List[str]
     # bookkeeping
     approved: bool

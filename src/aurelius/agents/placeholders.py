@@ -10,23 +10,9 @@ from __future__ import annotations
 
 from .base import PlaceholderAgent
 
-
-def sandbox_executor() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Sandbox Executor", "Execute analysis code in an isolated container", "Phase 2"
-    )
-
-
-def result_aggregator() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Result Aggregator", "Collect and validate sandbox results", "Phase 2"
-    )
-
-
-def methodology_auditor() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Methodology Auditor", "Detect p-hacking / data-dredging", "Phase 2"
-    )
+# Phase 2's sandbox_executor, result_aggregator, methodology_auditor and Phase 3's
+# proof_of_rigor / living_doc_versioner are now fully implemented (see agents.execution,
+# agents.verification, agents.publication). The remaining placeholders below are Phase 4-5.
 
 
 def compliance_checker() -> PlaceholderAgent:
@@ -44,10 +30,4 @@ def preprint_publisher() -> PlaceholderAgent:
 def patent_freedom() -> PlaceholderAgent:
     return PlaceholderAgent(
         "Patent Freedom", "USPTO/WIPO freedom-to-operate cross-reference", "Phase 5"
-    )
-
-
-def living_doc_versioner() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Living Doc Versioner", "Git/IPFS-backed versioned living document", "Phase 3"
     )
