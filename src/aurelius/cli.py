@@ -25,6 +25,10 @@ def main() -> None:
     parser.add_argument("--graph", action="store_true",
                         help="Run the multi-stage agent DAG (orchestration layer) instead of "
                              "the linear loop. Logs an audit trail and checkpoints each stage.")
+    parser.add_argument("--sandbox", action="store_true",
+                        help="With --graph: actually execute the generated analysis code in a "
+                             "hardened, network-less Docker container (requires Docker). Off by "
+                             "default because the code is model-written.")
     parser.add_argument("--no-save", action="store_true", help="Do not write draft/report files.")
     args = parser.parse_args()
 
@@ -57,7 +61,8 @@ def _run_graph(args) -> None:
     from .orchestration.workflow_manager import run_research_graph
 
     result = run_research_graph(
-        args.topic, model=args.model, provider=args.provider, save=not args.no_save
+        args.topic, model=args.model, provider=args.provider, save=not args.no_save,
+        enable_sandbox=args.sandbox,
     )
     state = result["final_state"]
     print(f"Status: {result['status']} | Session: {result['session_id']}")
@@ -67,6 +72,14 @@ def _run_graph(args) -> None:
     report = result.get("verification_report", {})
     print(f"Verification score: {report.get('verification_score', 0.0):.0%} "
           f"({report.get('counts', {}).get('total', 0)} items checked)")
+    mr = state.get("methodology_report", {})
+    if mr:
+        print(f"Methodology risk: {mr.get('risk','n/a')} (score {mr.get('risk_score','n/a')}, "
+              f"{len(mr.get('findings', []))} finding(s))")
+    proof = state.get("proof", {})
+    if proof:
+        print(f"Proof-of-rigor: {proof.get('content_hash','')[:16]}… "
+              f"(sig {proof.get('sig_algo')}, anchored={proof.get('anchor',{}).get('anchored')})")
     print(f"Audit-trail entries: {len(result['audit_trail'])}")
     print(f"Checkpoint: {result['checkpoint']}")
 

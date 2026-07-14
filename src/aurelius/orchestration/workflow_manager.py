@@ -24,11 +24,12 @@ class ResearchWorkflowManager:
         provider: Optional[str] = None,
         *,
         save: bool = True,
+        enable_sandbox: bool = False,
     ) -> None:
         self.researcher_id = researcher_id
         self.model = model
         self.provider = provider
-        self.graph = build_research_graph(model, provider, save=save)
+        self.graph = build_research_graph(model, provider, save=save, enable_sandbox=enable_sandbox)
         self.breakpoints: Set[str] = set()
 
     def add_human_breakpoint(self, stage: str) -> None:
@@ -88,10 +89,13 @@ def run_research_graph(
     breakpoints: Optional[List[str]] = None,
     *,
     save: bool = True,
+    enable_sandbox: bool = False,
 ) -> Dict[str, Any]:
     """One-call entry point for the MCP tool and CLI: build a manager, register any
     breakpoints, and run one research session over the DAG."""
-    manager = ResearchWorkflowManager(model=model, provider=provider, save=save)
+    manager = ResearchWorkflowManager(
+        model=model, provider=provider, save=save, enable_sandbox=enable_sandbox
+    )
     for stage in breakpoints or []:
         manager.add_human_breakpoint(stage)
     return manager.run(topic)
