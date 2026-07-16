@@ -39,19 +39,22 @@ def test_full_dag_reaches_finish_and_checkpoints():
 
     # Reached the terminal stage and every stage logged something.
     agents_run = {e["agent"] for e in result["audit_trail"]}
-    assert {"Literature Miner", "Citation Verifier", "Proof of Rigor", "Patent Freedom"} <= agents_run
+    assert {"Literature Miner", "Citation Verifier", "Proof of Rigor", "Patent Freedom",
+            "Preprint Packager", "Episodic Memory"} <= agents_run
 
     # Load-bearing outputs are populated.
     assert state["literature_summary"]
     assert state["hypothesis"]
     assert state["evidence_ledger"]
     assert state["proof_of_rigor"]
+    assert state["preprint_package"]["ok"] is True
+    assert state["patent_report"]["verdict"] in ("no_hits", "potential_overlap", "insufficient_data")
     assert result["verification_report"]["verification_score"] == 1.0
 
     # A resumable checkpoint was written for the session.
     cp = result["checkpoint"]
     data = json.loads(open(cp, encoding="utf-8").read())
-    assert data["completed_node"] == "patent_freedom"
+    assert data["completed_node"] == "record_memory"
     assert data["next_node"] is None
 
 
@@ -63,6 +66,15 @@ def test_rejected_topic_short_circuits():
     # It screened out and jumped to attestation without designing an experiment.
     assert "Experiment Designer" not in agents_run
     assert "Proof of Rigor" in agents_run
+    # The failure was still recorded as an episode for future recall.
+    assert any(e["action"] == "record_memory" for e in result["audit_trail"])
+
+
+def test_memory_learns_across_runs():
+    run_research_graph("Effect of vitamin D on bone density", save=False)
+    second = run_research_graph("Vitamin D supplementation and bone density in adults", save=False)
+    recall = second["final_state"]["memory_recall"]
+    assert recall and "vitamin d" in recall[0]["topic"].lower()
 
 
 def test_breakpoint_pauses_then_resumes():
