@@ -9,8 +9,21 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from .tools import diagrams, drafting, latex, ledger, numeric, scholarly, screening, search, style
+from .tools import (
+    diagrams,
+    drafting,
+    latex,
+    ledger,
+    multilingual,
+    numeric,
+    retractions,
+    scholarly,
+    screening,
+    search,
+    style,
+)
 from .autonomous.pipeline import run_autonomous_research
+from .memory import episodic
 from .orchestration.workflow_manager import run_research_graph
 
 mcp = FastMCP(
@@ -158,16 +171,56 @@ def diagram_template(diagram_type: str, description: str) -> Dict[str, Any]:
 
 # --- LaTeX -------------------------------------------------------------------------
 @mcp.tool()
-def latex_outline(topic: str) -> Dict[str, str]:
-    """Return a compile-ready LaTeX article skeleton (Abstract..References) + a
-    BibTeX entry stub."""
-    return latex.latex_outline(topic)
+def latex_outline(topic: str, template: str = "article") -> Dict[str, str]:
+    """Return a compile-ready LaTeX skeleton (Abstract..References) + a BibTeX entry
+    stub. `template`: "article" (single-column preprint), "twocolumn"
+    (conference/IEEE-style), or "report" (chaptered long-form)."""
+    return latex.latex_outline(topic, template)
 
 
 @mcp.tool()
 def save_latex(content: str, filename: str = "paper.tex") -> Dict[str, Any]:
     """Save LaTeX (.tex) or BibTeX (.bib) source to the Aurelius output directory."""
     return latex.save_latex(content, filename)
+
+
+# --- Multilingual, retraction watch & memory (Phases 5-6) -----------------------
+@mcp.tool()
+def multilingual_search(
+    query: str,
+    languages: Optional[List[str]] = None,
+    per_lang: int = 3,
+) -> Dict[str, Any]:
+    """Search the global scholarly literature across languages via OpenAlex (keyless).
+
+    `languages` are ISO 639-1 codes (default: zh, es, de, ja). With an LLM key configured
+    the query is translated per language for better native recall; without one the original
+    query is used (fewer, but still real, results). Use to surface non-English work
+    (Chinese, Spanish, German, Japanese...) that an English-only search misses."""
+    return multilingual.multilingual_search(query, languages, per_lang)
+
+
+@mcp.tool()
+def retraction_watch(references: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Re-check previously verified citations for retractions or verification drift.
+
+    Pass citation strings to re-verify them now, or omit `references` to scan every saved
+    Proof-of-Rigor bundle and re-check all citations recorded there. Returns `alerts` for
+    anything newly retracted or no longer verifiable — a paper cited last month can be
+    retracted today."""
+    return retractions.retraction_watch(references)
+
+
+@mcp.tool()
+def research_memory(topic: str, k: int = 3) -> Dict[str, Any]:
+    """Recall past Aurelius research sessions relevant to a topic (episodic memory).
+
+    Returns up to `k` past episodes — hypothesis, verification score, methodology risk,
+    and derived lessons — so new research can build on successes and avoid repeating
+    failures. Episodes are recorded automatically by the research graph."""
+    episodes = episodic.recall_episodes(topic, k)
+    return {"ok": True, "topic": topic, "episodes": episodes,
+            "note": f"{len(episodes)} relevant past session(s)."}
 
 
 # --- Autonomous (BYO-key) mode -------------------------------------------------

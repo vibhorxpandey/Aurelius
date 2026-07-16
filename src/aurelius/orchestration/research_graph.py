@@ -25,10 +25,13 @@ from ..agents.hypothesis import (
     PatternDiscoveryAgent,
     TheoryGeneratorAgent,
 )
+from ..agents.memory_agent import EpisodicMemoryAgent
 from ..agents.publication import (
     DraftPaperAgent,
     LatexFormatterAgent,
     LivingDocVersionerAgent,
+    PatentFreedomAgent,
+    PreprintPackagerAgent,
     ProofOfRigorAgent,
 )
 from ..agents.verification import (
@@ -42,6 +45,7 @@ from .swarm import AgentSwarmCoordinator
 
 # Public, ordered list of stage (node) names — handy for tests, docs, and breakpoints.
 STAGES: List[str] = [
+    "recall_memory",
     "mine_literature",
     "generate_hypotheses",
     "screen_hypotheses",
@@ -59,6 +63,7 @@ STAGES: List[str] = [
     "publish_preprints",
     "update_living_doc",
     "patent_freedom",
+    "record_memory",
 ]
 
 
@@ -83,6 +88,7 @@ def build_research_graph(
         return swarm.run_parallel(state, [theory, pattern])
 
     g = Graph()
+    g.add_node("recall_memory", EpisodicMemoryAgent(mode="recall", **kw))
     g.add_node("mine_literature", LiteratureMinerAgent(**kw))
     g.add_node("generate_hypotheses", generate_hypotheses)
     g.add_node("screen_hypotheses", HypothesisValidatorAgent(**kw))
@@ -97,12 +103,14 @@ def build_research_graph(
     g.add_node("draft_paper", DraftPaperAgent(save=save, **kw))
     g.add_node("format_latex", LatexFormatterAgent(**kw))
     g.add_node("proof_of_rigor", ProofOfRigorAgent(**kw))
-    g.add_node("publish_preprints", placeholders.preprint_publisher())
+    g.add_node("publish_preprints", PreprintPackagerAgent(**kw))
     g.add_node("update_living_doc", LivingDocVersionerAgent(**kw))
-    g.add_node("patent_freedom", placeholders.patent_freedom())
+    g.add_node("patent_freedom", PatentFreedomAgent(**kw))
+    g.add_node("record_memory", EpisodicMemoryAgent(mode="record", **kw))
 
     # Linear edges for the happy path.
     linear = [
+        ("recall_memory", "mine_literature"),
         ("mine_literature", "generate_hypotheses"),
         ("generate_hypotheses", "screen_hypotheses"),
         ("design_experiment", "generate_code"),
@@ -118,16 +126,18 @@ def build_research_graph(
         ("proof_of_rigor", "publish_preprints"),
         ("publish_preprints", "update_living_doc"),
         ("update_living_doc", "patent_freedom"),
+        ("patent_freedom", "record_memory"),
     ]
     for src, dst in linear:
         g.add_edge(src, dst)
 
-    # Conditional: a rejected hypothesis skips experiment/drafting and jumps to attestation.
+    # Conditional: a rejected hypothesis skips experiment/drafting and jumps to attestation
+    # (and still flows on to record_memory - failed runs are the most valuable lessons).
     def after_screen(state: ResearchState) -> str:
         return "design_experiment" if state.get("approved", True) else "proof_of_rigor"
 
     g.add_conditional_edge("screen_hypotheses", after_screen)
 
-    g.set_entry("mine_literature")
-    g.set_finish("patent_freedom")
+    g.set_entry("recall_memory")
+    g.set_finish("record_memory")
     return g
