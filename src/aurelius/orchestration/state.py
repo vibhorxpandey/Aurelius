@@ -36,6 +36,9 @@ class ResearchState(TypedDict, total=False):
     proof_of_rigor: str
     proof: Dict[str, Any]
     living_doc: Dict[str, Any]
+    preprint_package: Dict[str, Any]
+    patent_report: Dict[str, Any]
+    memory_recall: List[Dict[str, Any]]
     publication_urls: List[str]
     # bookkeeping
     approved: bool

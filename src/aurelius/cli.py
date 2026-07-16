@@ -80,6 +80,13 @@ def _run_graph(args) -> None:
     if proof:
         print(f"Proof-of-rigor: {proof.get('content_hash','')[:16]}… "
               f"(sig {proof.get('sig_algo')}, anchored={proof.get('anchor',{}).get('anchored')})")
+    pkg = state.get("preprint_package", {})
+    if pkg.get("ok"):
+        print(f"Preprint bundle ({pkg.get('server')}): {pkg.get('zip')}")
+    pat = state.get("patent_report", {})
+    if pat:
+        print(f"Patent screen: {pat.get('verdict','n/a')} ({len(pat.get('hits', []))} hit(s)) "
+              f"- not legal advice")
     print(f"Audit-trail entries: {len(result['audit_trail'])}")
     print(f"Checkpoint: {result['checkpoint']}")
 

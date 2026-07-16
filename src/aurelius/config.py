@@ -51,6 +51,13 @@ def get_llm_key(provider: str) -> Optional[str]:
     return None
 
 
+def get_patentsview_key() -> Optional[str]:
+    """Optional PatentsView API key for patent-freedom checks (Phase 5). Free registration
+    at https://patentsview.org/apis/keyrequest. Without it, the patent search degrades to a
+    web-search heuristic (Tavily, if configured) or an honest 'insufficient data' verdict."""
+    return _first_env("PATENTSVIEW_API_KEY", "AURELIUS_PATENTSVIEW_API_KEY")
+
+
 def get_proof_hmac_secret() -> Optional[str]:
     """Optional shared secret for HMAC-signing Proof-of-Rigor bundles (Phase 3).
 

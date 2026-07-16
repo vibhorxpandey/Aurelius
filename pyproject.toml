@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # The bare name "aurelius" is already claimed on PyPI, so the distribution ships as
 # "aurelius-mcp". The import package and CLI command are still `aurelius`.
 name = "aurelius-mcp"
-version = "0.5.0"
+version = "0.6.0"
 description = "Aurelius — a fact-checked research MCP server. Bring rigorous, web-verified academic drafting to Claude, ChatGPT, Gemini and any MCP-capable app."
 readme = "README.md"
 requires-python = ">=3.10"

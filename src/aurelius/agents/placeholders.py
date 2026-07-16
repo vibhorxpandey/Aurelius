@@ -1,33 +1,22 @@
-"""Honest placeholders for capabilities that belong to Phases 2-5.
+"""Honest placeholders for capabilities deliberately not (yet) implemented.
 
 Each returns a :class:`PlaceholderAgent` that passes state through unchanged and records an
-explicit 'skipped' entry naming the phase that will implement it. They keep the research DAG
-shape complete (so the full pipeline runs end-to-end) without ever pretending to do work
-Aurelius cannot yet do. When a phase lands, replace the corresponding factory with a real
-agent module — the graph wiring in ``research_graph`` need not change.
+explicit 'skipped' entry. After Phases 1-6 only one in-graph placeholder remains:
+
+* ``compliance_checker`` — HIPAA/GDPR/IRB screening needs domain-specific legal rulesets;
+  a regex heuristic would give false confidence on exactly the questions where being wrong
+  is most costly.
+
+Decentralized-funding integration (the other Phase 5 bullet) is deliberately **out of
+scope**, not merely unimplemented: there is no standard DeSci funding protocol to integrate
+against, and Aurelius's value is the verification/trust layer, not fund-raising plumbing.
 """
 from __future__ import annotations
 
 from .base import PlaceholderAgent
 
-# Phase 2's sandbox_executor, result_aggregator, methodology_auditor and Phase 3's
-# proof_of_rigor / living_doc_versioner are now fully implemented (see agents.execution,
-# agents.verification, agents.publication). The remaining placeholders below are Phase 4-5.
-
 
 def compliance_checker() -> PlaceholderAgent:
     return PlaceholderAgent(
-        "Compliance Checker", "HIPAA/GDPR/ethics screening", "Phase 2"
-    )
-
-
-def preprint_publisher() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Preprint Publisher", "Publish to arXiv/bioRxiv/medRxiv", "Phase 4"
-    )
-
-
-def patent_freedom() -> PlaceholderAgent:
-    return PlaceholderAgent(
-        "Patent Freedom", "USPTO/WIPO freedom-to-operate cross-reference", "Phase 5"
+        "Compliance Checker", "HIPAA/GDPR/ethics screening", "future work"
     )

@@ -190,6 +190,9 @@ found. When a citation carries a DOI or arXiv id, it's looked up directly for an
 | `verify_claims(claims)` | Batch-verify citations/claims into a scored Evidence Ledger | — (Tavily optional, fallback only) |
 | `verify_bibliography(text)` | Verify a whole References block; returns a scored ledger + cleaned BibTeX | — (Tavily optional, fallback only) |
 | `verify_stat(claim, …)` | Verify a statistic ('GDP grew 2.5% in 2023') against World Bank data | — (Tavily optional, fallback only) |
+| `multilingual_search(query, …)` | Search the global literature across languages (zh/es/de/ja…) via OpenAlex | — |
+| `retraction_watch(references?)` | Re-check verified citations for new retractions / verification drift | — |
+| `research_memory(topic, …)` | Recall lessons from past Aurelius research sessions (episodic memory) | — |
 | `web_search(query, …)` | Search the web for evidence about a factual claim | Tavily key |
 | `polish_prose(content, …)` | Style/readability pass on *already-verified* content | — (LLM key only if `use_llm=True`) |
 | `diagram_template(diagram_type, …)` | Mermaid scaffold: flowchart / architecture / sequence | — |
@@ -269,8 +272,16 @@ bundle: a SHA-256 content hash of the evidence ledger + full audit trail, signed
 independently checkable with `aurelius.proof.verify_proof(...)`. Optional [IPFS pinning](https://pinata.cloud)
 (set `PINATA_JWT`) and optional on-chain anchoring (`pip install aurelius-mcp[chain]` + set
 `AURELIUS_CHAIN_RPC` / `AURELIUS_CHAIN_PRIVATE_KEY`) layer on top; both are graceful no-ops when
-unconfigured. `check_compliance`, `publish_preprints`, and `patent_freedom` remain honest
-placeholders — see [`ARCHITECTURE.md`](ARCHITECTURE.md) for the roadmap.
+unconfigured.
+
+**Publishing, DeSci & memory (Phases 4–6).** The DAG also packages a **submission-ready
+preprint bundle** (compile-ready LaTeX, a DOI-backed `references.bib` built from the Evidence
+Ledger, and a per-server checklist for arXiv/bioRxiv/medRxiv) — *submission itself stays
+manual by design*, since those servers require human endorsement/moderation. It runs a
+**patent-freedom screen** (PatentsView, a screening aid — **not legal advice**), and it has
+**episodic memory**: every run is recorded with derived lessons and relevant past runs are
+recalled at the start of new ones. `check_compliance` remains an honest placeholder — see
+[`ARCHITECTURE.md`](ARCHITECTURE.md) for the full status.
 
 ---
 

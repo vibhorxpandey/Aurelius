@@ -3,6 +3,45 @@
 All notable changes to `aurelius-mcp` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0]
+
+Phases 4, 5 & 6 of the [architecture roadmap](ARCHITECTURE.md): the publication pipeline,
+DeSci-adjacent screening, and multilingual + memory. Runtime install stays `mcp` + `httpx`.
+
+### Added — Phase 4 (publication pipeline)
+- **LaTeX template variants** — `latex_outline(topic, template=...)` now offers `article`
+  (single-column preprint), `twocolumn` (conference/IEEE-style), and `report` (chaptered
+  long-form); all compile with plain pdflatex + bibtex.
+- **Preprint submission packager** (`tools/preprint.py` + `PreprintPackagerAgent`): builds a
+  submission-ready bundle (compile-ready LaTeX, verified draft, DOI-backed `references.bib`
+  from the Evidence Ledger, metadata, and a server-specific checklist) zipped for arXiv /
+  bioRxiv / medRxiv. **Submission stays manual by design** — preprint servers require human
+  endorsement/moderation and have no public submission API; auto-submitting would abuse the
+  process and undermine the project's integrity brand.
+
+### Added — Phase 5 (DeSci-adjacent)
+- **Patent-freedom screening** (`tools/patents.py` + `PatentFreedomAgent`): PatentsView
+  (USPTO, optional free key) with a web-search fallback and an honest "insufficient data"
+  verdict — always labelled a screening aid, **not legal advice**.
+- **Retraction watcher** (`tools/retractions.py` + `retraction_watch` tool): re-checks
+  previously verified citations (an explicit list, or every citation in saved proof bundles)
+  and alerts on anything newly retracted or no longer verifiable.
+- Decentralized-funding integration is intentionally **out of scope** (no standard protocol;
+  outside the verification/trust mission).
+
+### Added — Phase 6 (multilingual & memory)
+- **Multilingual literature search** (`tools/multilingual.py` + `multilingual_search` tool):
+  searches OpenAlex across languages (default zh/es/de/ja, keyless); translates the query per
+  language when an LLM key is present, otherwise searches untranslated.
+- **Episodic memory** (`memory/` + `EpisodicMemoryAgent` + `research_memory` tool): every run
+  is recorded as an episode with derived lessons; the graph now recalls relevant past
+  episodes at the start of each run (new `recall_memory` / `record_memory` graph stages) so
+  the swarm learns from prior successes and failures.
+
+### Notes
+- The research DAG is now 19 stages. Only `check_compliance` remains an honest placeholder
+  (domain-specific legal rulesets are future work). 61 tests pass; backward-compatible.
+
 ## [0.5.0]
 
 Phases 2 & 3 of the [architecture roadmap](ARCHITECTURE.md): a containerized code sandbox with
