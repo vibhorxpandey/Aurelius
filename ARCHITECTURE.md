@@ -637,20 +637,32 @@ Runtime install stays `mcp` + `httpx`; tests use `pytest` (already in the `dev` 
 - Caveat: the on-chain path sends a real gas-costing tx and is unexercised in CI — validate on
   a testnet first.
 
-### Phase 4: Publication Pipeline
-- LaTeX template formatting (journal-specific)
-- One-click preprint publishing (arXiv, bioRxiv, medRxiv)
-- Living documents with version control
+### Phase 4: Publication Pipeline ✅ IMPLEMENTED (0.6.0)
+- **LaTeX template variants** — `article` / `twocolumn` / `report`, all plain-pdflatex-safe
+  (`tools/latex.py`).
+- **Preprint submission packager** — `tools/preprint.py` + `PreprintPackagerAgent`: a
+  submission-ready bundle (LaTeX, verified draft, DOI-backed `references.bib`, metadata,
+  per-server checklist) zipped for arXiv/bioRxiv/medRxiv. **Not auto-submission** — preprint
+  servers require human endorsement/moderation and offer no submission API; auto-submitting
+  would abuse the process and undermine the integrity brand. Aurelius does everything up to
+  the final click; the click is the researcher's.
+- **Living documents** — shipped in 0.5.0 (`LivingDocVersionerAgent`).
 
-### Phase 5: DeSci Integration
-- Patent freedom checks (USPTO, WIPO)
-- Decentralized funding protocol integration
-- Retraction watchers for cited papers
+### Phase 5: DeSci Integration ✅ PARTIAL (0.6.0)
+- **Patent-freedom checks** — `tools/patents.py` + `PatentFreedomAgent`: PatentsView (USPTO,
+  optional key) with web fallback; a screening aid, **not legal advice**. (WIPO not yet added.)
+- **Retraction watchers** — `tools/retractions.py` + `retraction_watch`: re-checks previously
+  verified citations for retractions / verification drift.
+- **Decentralized funding** — intentionally **out of scope**: no standard DeSci funding
+  protocol to integrate against, and it sits outside the verification/trust mission.
 
-### Phase 6: Multilingual & Memory
-- CNKI, Wanfang, global database synthesis
-- Episodic memory for organizational knowledge
-- Learning from successes and failures
+### Phase 6: Multilingual & Memory ✅ IMPLEMENTED (0.6.0)
+- **Global database synthesis** — `tools/multilingual.py`: OpenAlex language-filtered search
+  (default zh/es/de/ja, keyless; LLM query translation when a key is present). CNKI/Wanfang
+  have no public APIs, so OpenAlex's open index is the honest, reproducible proxy.
+- **Episodic memory + learning** — `memory/` + `EpisodicMemoryAgent`: records every run with
+  derived lessons and recalls relevant past episodes at the start of new runs (new
+  `recall_memory` / `record_memory` graph stages).
 
 ---
 
@@ -686,7 +698,12 @@ real agents; no graph rewiring required.
 
 ---
 
-**Status:** Phase 1 (orchestration, 0.4.0) + Phases 2 & 3 (Docker sandbox + p-hacking audit +
-cryptographic Proof-of-Rigor, 0.5.0) shipped — in-house, runtime install still `mcp` + `httpx`
-(on-chain anchoring is an opt-in `[chain]` extra), backward-compatible throughout.
-**Next:** Phase 4 (publication pipeline — preprint submission), Phase 5 (DeSci / patent-freedom).
+**Status:** All six roadmap phases shipped — Phase 1 (orchestration, 0.4.0), Phases 2 & 3
+(Docker sandbox + p-hacking audit + cryptographic Proof-of-Rigor, 0.5.0), and Phases 4-6
+(preprint packager, patent-freedom + retraction watch, multilingual + episodic memory, 0.6.0).
+In-house throughout; runtime install still `mcp` + `httpx` (on-chain anchoring is an opt-in
+`[chain]` extra); 19-stage research DAG; backward-compatible.
+**Remaining honest gaps:** `check_compliance` (needs domain legal rulesets), preprint
+*auto*-submission (blocked by design — servers require human moderation), WIPO patents, and
+decentralized-funding (out of scope). The highest-leverage next step is not a Phase 7 but a
+**verification eval harness** (measured precision/recall) to back the "verified" claim.
