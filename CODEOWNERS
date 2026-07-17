@@ -1,0 +1,5 @@
+# Code owners
+
+# Default owners for core code and repo config
+/src/ @vibhorxpandey
+/.github/ @vibhorxpandey
