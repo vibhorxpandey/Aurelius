@@ -2,7 +2,7 @@
   <img src="assets/aurelius-banner.jpg" alt="Aurelius — a fact-checked research MCP server" width="100%">
 </p>
 UNDER DEVELOPMENT, IT'LL BECOME SOMETHING GREAT
-# Aurelius
+# Aurelius (given under the name marcus aurelius)
 
 [![PyPI version](https://img.shields.io/pypi/v/aurelius-mcp.svg)](https://pypi.org/project/aurelius-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/aurelius-mcp.svg)](https://pypi.org/project/aurelius-mcp/)
