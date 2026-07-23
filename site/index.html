@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurelius — every citation, checked against the record</title>
+<meta name="description" content="Aurelius is a verification engine for research: it checks every citation and claim against live scholarly databases — OpenAlex and Crossref — retraction-aware, author-matched, DOI-precise.">
+<meta property="og:title" content="Aurelius — every citation, checked against the record">
+<meta property="og:description" content="A fact-checked research MCP server. Catches the fake, retracted, and misattributed sources AI research tools miss.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314604A'/%3E%3Cpath d='M8 17l5 5 11-12' stroke='%23F3F4EF' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<!-- Fonts: one external request, with full system fallbacks — the page works without it. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Public+Sans:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   TOKENS — light (archival paper) / dark (records room)
+   ============================================================ */
+:root {
+  --paper:     #F3F4EF;   /* cool archival stock, not warm cream */
+  --paper-2:   #FBFBF8;   /* card / receipt surface */
+  --ink:       #1A201B;
+  --muted:     #58605A;
+  --rule:      #D8DBD1;
+  --accent:    #14604A;   /* ledger green — "verified" is the brand */
+  --accent-soft: #E3ECE6;
+  --on-accent: #F3F4EF;
+  --retract:   #A62B22;   /* semantic only: retractions, rejections */
+  --code-bg:   #EDEFE8;
+
+  /* the dark "archive" band keeps its own fixed palette in both themes */
+  --band-bg:   #121613;
+  --band-bg-2: #1A1F1B;
+  --band-ink:  #E8EAE2;
+  --band-muted:#96A098;
+  --band-rule: #2B322C;
+  --band-accent: #57C494;
+  --band-retract: #E0685A;
+
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --w: 1120px;
+  --pad: clamp(1.25rem, 5vw, 2.5rem);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:   #121613;
+    --paper-2: #1A1F1B;
+    --ink:     #E8EAE2;
+    --muted:   #9AA49C;
+    --rule:    #2B322C;
+    --accent:  #57C494;
+    --accent-soft: #1D2B23;
+    --on-accent: #0E1410;
+    --retract: #E0685A;
+    --code-bg: #191E1A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="light"] {
+  --paper: #F3F4EF; --paper-2: #FBFBF8; --ink: #1A201B; --muted: #58605A;
+  --rule: #D8DBD1; --accent: #14604A; --accent-soft: #E3ECE6; --on-accent: #F3F4EF;
+  --retract: #A62B22; --code-bg: #EDEFE8; color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --paper: #121613; --paper-2: #1A1F1B; --ink: #E8EAE2; --muted: #9AA49C;
+  --rule: #2B322C; --accent: #57C494; --accent-soft: #1D2B23; --on-accent: #0E1410;
+  --retract: #E0685A; --code-bg: #191E1A; color-scheme: dark;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0;
+}
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.archive :focus-visible { outline-color: var(--band-accent); }
+
+.skip-link {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--accent); color: var(--on-accent);
+  padding: .6rem 1rem; z-index: 100; font-weight: 600; text-decoration: none;
+}
+.skip-link:focus-visible { left: 0; }
+
+.wrap { max-width: var(--w); margin-inline: auto; padding-inline: var(--pad); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 1rem;
+}
+.archive .eyebrow { color: var(--band-accent); }
+
+section { border-top: 1px solid var(--rule); }
+.section-pad { padding-block: clamp(3.5rem, 8vw, 6rem); }
+
+.lede { font-size: 1.125rem; color: var(--muted); max-width: 62ch; }
+
+code, pre, .mono { font-family: var(--font-mono); }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding-block: .8rem;
+}
+.wordmark {
+  font-family: var(--font-mono); font-weight: 600; font-size: .95rem;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink); text-decoration: none;
+  display: flex; align-items: center; gap: .55rem;
+}
+.wordmark .seal {
+  width: 20px; height: 20px; border-radius: 4px; background: var(--accent);
+  display: inline-grid; place-items: center; flex: none;
+}
+.wordmark .seal svg { display: block; }
+.nav-links { display: flex; gap: 1.4rem; align-items: center; }
+.nav-links a {
+  color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 500;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-links .gh {
+  color: var(--accent); border: 1px solid var(--accent);
+  padding: .35rem .8rem; border-radius: 4px; font-weight: 600;
+}
+.nav-links .gh:hover { background: var(--accent); color: var(--on-accent); }
+@media (max-width: 720px) { .nav-links a:not(.gh) { display: none; } }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero { border-top: none; }
+.hero-grid {
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: clamp(2rem, 5vw, 4rem); align-items: center;
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+@media (max-width: 880px) { .hero-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.hero h1 {
+  font-size: clamp(2.3rem, 5.2vw, 3.7rem);
+  font-weight: 600;
+}
+.hero h1 em { font-style: italic; color: var(--accent); }
+.hero .lede { margin-top: 1.25rem; }
+
+.cta-row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-weight: 600; font-size: .95rem; text-decoration: none;
+  padding: .7rem 1.2rem; border-radius: 5px; border: 1px solid transparent;
+  cursor: pointer;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-ghost { border-color: var(--rule); color: var(--ink); background: transparent; }
+.btn-ghost:hover { border-color: var(--ink); }
+
+.install-chip {
+  display: inline-flex; align-items: center; gap: .7rem;
+  font-family: var(--font-mono); font-size: .88rem;
+  background: var(--code-bg); border: 1px solid var(--rule);
+  border-radius: 5px; padding: .55rem .5rem .55rem .9rem;
+}
+.install-chip button {
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  background: var(--paper-2); color: var(--accent);
+  border: 1px solid var(--rule); border-radius: 4px;
+  padding: .3rem .6rem; cursor: pointer;
+}
+.install-chip button:hover { border-color: var(--accent); }
+
+.hero-meta {
+  margin-top: 1.5rem; font-size: .85rem; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: .4rem 1.1rem;
+}
+.hero-meta span::before { content: "· "; color: var(--accent); }
+.hero-meta span:first-child::before { content: ""; }
+
+/* --- the hero receipt (evidence ledger) --- */
+.ledger {
+  background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 1.1rem 1.25rem 1.25rem;
+  font-family: var(--font-mono); font-size: .8rem; line-height: 1.55;
+  box-shadow: 0 1px 0 var(--rule), 0 12px 32px -18px rgba(20, 30, 22, .35);
+  overflow-x: auto;
+}
+.ledger-head {
+  color: var(--muted); font-size: .72rem;
+  border-bottom: 1px dashed var(--rule);
+  padding-bottom: .6rem; margin-bottom: .8rem;
+  display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+}
+.ledger-row { display: grid; grid-template-columns: 7.2em minmax(0,1fr); gap: .8em; padding-block: .45rem; }
+.ledger-row + .ledger-row { border-top: 1px dotted var(--rule); }
+.verdict { font-weight: 600; white-space: nowrap; }
+.verdict.ok  { color: var(--accent); }
+.verdict.bad { color: var(--retract); }
+.ledger-row .cite { min-width: 0; }
+.ledger-row .cite small { display: block; color: var(--muted); }
+.ledger-row .cite s { text-decoration-color: var(--retract); }
+.ledger-foot {
+  border-top: 1px dashed var(--rule); margin-top: .8rem; padding-top: .8rem;
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  font-size: .76rem; color: var(--muted);
+}
+.status-stamp {
+  font-weight: 600; letter-spacing: .08em; color: var(--retract);
+  border: 2px solid var(--retract); border-radius: 3px;
+  padding: .15rem .55rem; transform: rotate(-3deg);
+}
+.ledger-note { margin-top: .8rem; font-size: .8rem; color: var(--muted); font-family: var(--font-body); }
+
+/* hero load-in animation (only when .anim is set by JS and motion is allowed) */
+@media (prefers-reduced-motion: no-preference) {
+  html.anim .ledger-row, html.anim .ledger-foot { opacity: 0; animation: rowIn .45s ease-out forwards; }
+  html.anim .ledger-row:nth-child(2) { animation-delay: .25s; }
+  html.anim .ledger-row:nth-child(3) { animation-delay: .8s; }
+  html.anim .ledger-row:nth-child(4) { animation-delay: 1.35s; }
+  html.anim .ledger-foot { animation-delay: 2s; }
+  html.anim .status-stamp { opacity: 0; animation: stampIn .35s cubic-bezier(.2, 1.6, .4, 1) 2.25s forwards; }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes stampIn { from { opacity: 0; transform: rotate(-3deg) scale(1.6); } to { opacity: 1; transform: rotate(-3deg) scale(1); } }
+
+  html.anim .reveal { opacity: 0; transform: translateY(14px); transition: opacity .55s ease-out, transform .55s ease-out; }
+  html.anim .reveal.in { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   THE PROOF — dark archive band (fixed palette, both themes)
+   ============================================================ */
+.archive {
+  background: var(--band-bg); color: var(--band-ink);
+  border-top: 1px solid var(--band-rule);
+}
+.archive h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); }
+.archive .lede { color: var(--band-muted); }
+.archive a { color: var(--band-accent); }
+
+.receipts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(430px, 100%), 1fr));
+  gap: clamp(1.25rem, 3vw, 2rem); margin-top: 2.5rem;
+}
+.receipt {
+  position: relative;
+  background: var(--band-bg-2); border: 1px solid var(--band-rule); border-radius: 8px;
+  padding: 1.5rem 1.5rem 1.4rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.receipt h3 { font-size: 1.3rem; padding-right: 7.5rem; }
+.receipt .stamp {
+  position: absolute; top: 1.1rem; right: 1.1rem;
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 600;
+  letter-spacing: .1em;
+  border: 2px solid; border-radius: 3px; padding: .25rem .6rem;
+  transform: rotate(4deg);
+}
+.stamp.retracted { color: var(--band-retract); border-color: var(--band-retract); }
+.stamp.unverified { color: #E0B45A; border-color: #E0B45A; }
+.receipt pre {
+  margin: 0; background: var(--band-bg); border: 1px solid var(--band-rule);
+  border-radius: 6px; padding: 1rem 1.1rem;
+  font-size: .78rem; line-height: 1.6; overflow-x: auto;
+}
+.receipt pre .k { color: var(--band-muted); }
+.receipt pre .s { color: var(--band-ink); }
+.receipt pre .ok { color: var(--band-accent); font-weight: 600; }
+.receipt pre .bad { color: var(--band-retract); font-weight: 600; }
+.receipt figcaption, .receipt .why { font-size: .92rem; color: var(--band-muted); line-height: 1.6; }
+.receipt .why strong { color: var(--band-ink); font-weight: 600; }
+
+.archive-close {
+  margin-top: 2.25rem; padding-top: 1.5rem; border-top: 1px dashed var(--band-rule);
+  font-size: .95rem; color: var(--band-muted); max-width: 72ch;
+}
+.archive-close strong { color: var(--band-ink); }
+
+/* ============================================================
+   ARXIV-READY PAPERS
+   ============================================================ */
+.papers h2, .pricing h2, .start h2, .faq h2, .contact h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); }
+.papers .lede { margin-top: 1rem; }
+
+.pipeline {
+  list-style: none; margin: 2.25rem 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  font-family: var(--font-mono); font-size: .8rem;
+}
+.pipeline li {
+  background: var(--code-bg); border: 1px solid var(--rule); border-radius: 4px;
+  padding: .45rem .8rem;
+}
+.pipeline li.verify-step { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.pipeline .arrow { background: none; border: none; padding: 0 .1rem; color: var(--muted); }
+
+.paper-points {
+  margin: 2.25rem 0 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 1.5rem 2.5rem;
+}
+.paper-points li { border-top: 2px solid var(--rule); padding-top: 1rem; }
+.paper-points li strong {
+  display: block; font-weight: 600; margin-bottom: .3rem;
+}
+.paper-points li p { font-size: .95rem; color: var(--muted); }
+.honesty {
+  margin-top: 2.25rem; padding: 1.1rem 1.3rem;
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  font-size: .95rem; max-width: 72ch; border-radius: 0 6px 6px 0;
+}
+
+/* ============================================================
+   PRICING
+   ============================================================ */
+.pricing-note { margin-top: 1rem; }
+.tiers {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 1.25rem; margin-top: 2.5rem;
+}
+.tier {
+  grid-column: span 2;
+  background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 1.5rem; display: flex; flex-direction: column; gap: .9rem;
+}
+.tier.span3 { grid-column: span 3; }
+.tier.featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+@media (max-width: 980px) { .tier, .tier.span3 { grid-column: span 3; } }
+@media (max-width: 640px)  { .tier, .tier.span3 { grid-column: span 6; } }
+
+.tier h3 { font-size: 1.25rem; }
+.tier .price { font-family: var(--font-mono); font-size: .85rem; color: var(--muted); }
+.tier .price strong { color: var(--ink); font-size: 1.05rem; }
+.tier ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .45rem; font-size: .92rem; color: var(--muted); }
+.tier ul li { padding-left: 1.2rem; position: relative; }
+.tier ul li::before {
+  content: ""; position: absolute; left: 0; top: .52em;
+  width: .55em; height: .3em;
+  border-left: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
+.tier .tier-cta { margin-top: auto; padding-top: .5rem; }
+.tier .btn { width: 100%; justify-content: center; }
+.badge {
+  align-self: flex-start; font-family: var(--font-mono); font-size: .66rem;
+  font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 3px; padding: .2rem .5rem;
+}
+
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
+.steps { counter-reset: step; display: grid; gap: 2.5rem; margin-top: 2.5rem; }
+.step {
+  display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); gap: 1.25rem;
+}
+.step::before {
+  counter-increment: step; content: counter(step, decimal-leading-zero);
+  font-family: var(--font-mono); font-size: 1.1rem; font-weight: 600;
+  color: var(--accent); border-top: 2px solid var(--accent);
+  padding-top: .5rem; height: fit-content;
+}
+.step h3 { font-size: 1.35rem; margin-bottom: .4rem; }
+.step p { color: var(--muted); font-size: .97rem; max-width: 64ch; }
+
+.codeblock {
+  position: relative; margin-top: 1rem;
+  background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px;
+}
+.codeblock pre {
+  margin: 0; padding: 1rem 1.1rem; font-size: .82rem; line-height: 1.6; overflow-x: auto;
+}
+.copy-btn {
+  position: absolute; top: .5rem; right: .5rem;
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  background: var(--paper-2); color: var(--accent);
+  border: 1px solid var(--rule); border-radius: 4px;
+  padding: .3rem .6rem; cursor: pointer;
+}
+.copy-btn:hover { border-color: var(--accent); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+.tab {
+  font-family: var(--font-mono); font-size: .76rem; font-weight: 500;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 4px;
+  padding: .4rem .8rem; cursor: pointer;
+}
+.tab[aria-selected="true"] {
+  background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600;
+}
+.tab-panel[hidden] { display: none; }
+.config-note { font-size: .85rem; color: var(--muted); margin-top: .7rem; }
+
+.ask-example {
+  margin-top: 1rem; padding: 1rem 1.25rem;
+  border-left: 3px solid var(--accent); background: var(--paper-2);
+  border-radius: 0 6px 6px 0;
+  font-family: var(--font-display); font-style: italic; font-size: 1.1rem;
+}
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+.faq-list { margin-top: 2rem; border-top: 1px solid var(--rule); }
+.faq-list details { border-bottom: 1px solid var(--rule); }
+.faq-list summary {
+  cursor: pointer; list-style: none;
+  padding: 1.1rem 2.5rem 1.1rem 0; position: relative;
+  font-weight: 600; font-size: 1.02rem;
+}
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary::after {
+  content: "+"; position: absolute; right: .25rem; top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono); font-size: 1.2rem; color: var(--accent);
+}
+.faq-list details[open] summary::after { content: "−"; }
+.faq-list .answer { padding: 0 0 1.25rem; color: var(--muted); font-size: .97rem; max-width: 68ch; }
+.faq-list .answer code { font-size: .85em; background: var(--code-bg); padding: .1em .35em; border-radius: 3px; }
+
+/* ============================================================
+   CONTACT / FOOTER
+   ============================================================ */
+.contact .lede { margin-top: 1rem; }
+.contact-row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.contact-links { margin-top: 1.5rem; font-size: .92rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 1.5rem; }
+
+footer { border-top: 1px solid var(--rule); }
+.foot {
+  padding-block: 2rem; display: flex; flex-wrap: wrap; gap: 1rem;
+  justify-content: space-between; align-items: center;
+  font-size: .85rem; color: var(--muted);
+}
+.foot a { color: var(--muted); }
+.foot .mono { font-size: .78rem; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="wordmark" href="#">
+      <span class="seal" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 32 32"><path d="M8 17l5 5 11-12" stroke="currentColor" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--on-accent)"/></svg>
+      </span>
+      Aurelius
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#proof">The proof</a>
+      <a href="#papers">Papers</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#start">Get started</a>
+      <a href="#faq">FAQ</a>
+      <a class="gh" href="https://github.com/vibhorxpandey/Aurelius">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ========================== HERO ========================== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Fact-checked research · MCP server</p>
+        <h1>Every citation, checked <em>against the record.</em></h1>
+        <p class="lede">
+          Aurelius is a verification engine for research. It checks every citation and claim
+          against live scholarly databases — OpenAlex and Crossref — retraction-aware,
+          author-matched, DOI-precise. It catches the fake, retracted, and misattributed
+          sources AI research tools miss.
+        </p>
+        <div class="cta-row">
+          <span class="install-chip">
+            <span id="install-cmd">pip install aurelius-mcp</span>
+            <button type="button" class="js-copy" data-copy="pip install aurelius-mcp" aria-label="Copy install command">Copy</button>
+          </span>
+          <a class="btn btn-ghost" href="https://github.com/vibhorxpandey/Aurelius">View on GitHub</a>
+        </div>
+        <p class="hero-meta">
+          <span>MIT licensed</span>
+          <span>Works with Claude, Cursor, Gemini CLI</span>
+          <span>No API key needed for verification</span>
+        </p>
+      </div>
+
+      <figure class="ledger" aria-label="Example evidence ledger output" style="margin:0">
+        <div class="ledger-head">
+          <span>aurelius · verify_bibliography()</span>
+          <span>Evidence Ledger</span>
+        </div>
+        <div class="ledger-row">
+          <span class="verdict ok">[VERIFIED]</span>
+          <span class="cite">Knotek, E. S. (2007). How Useful is Okun's Law?
+            <small>Federal Reserve Bank of Kansas City</small></span>
+        </div>
+        <div class="ledger-row">
+          <span class="verdict bad">[UNVERIFIED]</span>
+          <span class="cite"><s>Okun, A. M. (1962). Potential GNP…</s>
+            <small>title match 1.00 — but authors don't match (found: Plosser, Schwert)</small></span>
+        </div>
+        <div class="ledger-row">
+          <span class="verdict bad">[RETRACTED]</span>
+          <span class="cite"><s>Wakefield, A. J. et al. (1998). Ileal-lymphoid-nodular hyperplasia…</s>
+            <small>is_retracted: true — do not cite</small></span>
+        </div>
+        <div class="ledger-foot">
+          <span>verification_score: 33% · 1/3 verified</span>
+          <span class="status-stamp">STATUS: REJECTED</span>
+        </div>
+        <figcaption class="ledger-note">
+          The default threshold is 100%. One bad citation rejects the draft.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ========================== THE PROOF ========================== -->
+  <section class="archive section-pad" id="proof">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">From the ledger</p>
+        <h2>Two catches, from real runs.</h2>
+        <p class="lede" style="margin-top:1rem">
+          Not hypotheticals. These are actual <code class="mono" style="font-size:.85em">verify_citation</code>
+          results against the live indexes.
+        </p>
+      </div>
+
+      <div class="receipts">
+        <figure class="receipt reveal" style="margin:0">
+          <span class="stamp retracted" aria-hidden="true">Retracted</span>
+          <h3>The retraction a title-match misses</h3>
+          <p class="why">
+            The Wakefield MMR–autism paper still circulates in citation lists 25 years after
+            its retraction. Aurelius checks OpenAlex's live retraction registry on every
+            lookup — and surfaces the result where it can't be missed.
+          </p>
+<pre aria-label="Verification result for the Wakefield 1998 citation"><span class="k">verify_citation(</span><span class="s">"Wakefield, A. J. et al. (1998).
+  Ileal-lymphoid-nodular hyperplasia, non-specific
+  colitis, and pervasive developmental disorder…"</span><span class="k">)</span>
+
+{
+  <span class="k">"verdict"</span>:      <span class="bad">"retracted"</span>,
+  <span class="k">"is_retracted"</span>: <span class="bad">true</span>,
+  <span class="k">"confidence"</span>:   <span class="s">"high"</span>,
+  <span class="k">"source"</span>:       <span class="s">"openalex"</span>,
+  <span class="k">"matched_work"</span>: {
+    <span class="k">"title"</span>: <span class="s">"RETRACTED: Ileal-lymphoid-nodular…"</span>,
+    <span class="k">"doi"</span>:   <span class="s">"10.1016/s0140-6736(97)11096-0"</span>
+  },
+  <span class="k">"notes"</span>: <span class="s">"Retracted work — flagged by openalex.
+            Do not cite."</span>
+}</pre>
+          <figcaption class="why">
+            <strong>is_retracted is always a top-level field</strong> — impossible for a host
+            model to overlook or rationalize past. When an index returns both a retracted
+            record and a clean-looking duplicate, Aurelius resolves the tie in favor of
+            surfacing the retraction.
+          </figcaption>
+        </figure>
+
+        <figure class="receipt reveal" style="margin:0">
+          <span class="stamp unverified" aria-hidden="true">Unverified</span>
+          <h3>The perfect title match that wasn't the paper</h3>
+          <p class="why">
+            A title match alone is not a verification. Aurelius corroborates the cited author
+            and year against the matched record — catching the subtle case a title-only
+            checker waves through.
+          </p>
+<pre aria-label="Verification result for the Okun 1962 citation"><span class="k">verify_citation(</span><span class="s">"Okun, A. M. (1962). Potential GNP:
+  Its Measurement and Significance."</span><span class="k">)</span>
+
+{
+  <span class="k">"verdict"</span>:      <span class="bad">"unverified"</span>,
+  <span class="k">"author_match"</span>: <span class="bad">false</span>,
+  <span class="k">"match_score"</span>:  <span class="ok">1.0</span>,
+  <span class="k">"matched_work"</span>: {
+    <span class="k">"authors"</span>: [<span class="s">"Charles I. Plosser"</span>,
+                <span class="s">"G. William Schwert"</span>],
+    <span class="k">"year"</span>: <span class="s">1979</span>
+  },
+  <span class="k">"notes"</span>: <span class="s">"Found a work with this title but
+            different authors (found: Plosser, Schwert;
+            cited: Okun) — likely not the paper you cited."</span>
+}</pre>
+          <figcaption class="why">
+            The title matched <strong>1.00 — a perfect score</strong> — but the only indexed
+            record with that title is a 1979 paper by Plosser &amp; Schwert, not Okun's 1962
+            original. A title-only checker reports ✓. Aurelius reports the truth, and hands
+            back a <code class="mono" style="font-size:.85em">corrected_citation</code> for the
+            record it actually found.
+          </figcaption>
+        </figure>
+      </div>
+
+      <p class="archive-close reveal">
+        <strong>We know this failure mode because we shipped it.</strong> An early version of
+        Aurelius verified that Okun citation with high confidence on the title match alone.
+        Version 0.3.0 fixed matching to corroborate author and year — the fix is in the
+        changelog, in public, like everything else here.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================== ARXIV-READY PAPERS ========================== -->
+  <section class="papers section-pad" id="papers">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">Papers</p>
+        <h2>arXiv-ready LaTeX, with nothing unverified inside.</h2>
+        <p class="lede">
+          Aurelius isn't just a checker — it's a drafting, verification, and LaTeX pipeline
+          working together. Plan a paper, draft it section by section, verify every citation
+          as you go, and end with a submission-ready bundle.
+        </p>
+      </div>
+
+      <ol class="pipeline reveal" aria-label="Paper pipeline">
+        <li>plan_paper_length</li>
+        <li class="arrow" aria-hidden="true">→</li>
+        <li>draft_outline</li>
+        <li class="arrow" aria-hidden="true">→</li>
+        <li class="verify-step">verify_bibliography</li>
+        <li class="arrow" aria-hidden="true">→</li>
+        <li>latex_outline</li>
+        <li class="arrow" aria-hidden="true">→</li>
+        <li>preprint bundle</li>
+      </ol>
+
+      <ul class="paper-points reveal">
+        <li>
+          <strong>A bibliography that can't contain junk</strong>
+          <p>The exported references.bib is built only from citations that verified —
+          DOI-backed, from authoritative metadata. An unverified or retracted source
+          never enters the bibliography.</p>
+        </li>
+        <li>
+          <strong>LaTeX that actually compiles</strong>
+          <p>Article, two-column, and report templates that build with plain
+          pdflatex + bibtex. No exotic packages, no journal-specific surprises.</p>
+        </li>
+        <li>
+          <strong>Zero tolerance by default</strong>
+          <p>The Evidence Ledger's default threshold is 100%: a single unverified citation
+          flips the whole verification report to STATUS: REJECTED until you fix or
+          remove it.</p>
+        </li>
+        <li>
+          <strong>Receipts included</strong>
+          <p>Each run can emit a signed Proof-of-Rigor: a SHA-256 content hash of the
+          evidence ledger and audit trail, signed with ed25519 — tamper-evident and
+          independently checkable.</p>
+        </li>
+        <li>
+          <strong>Packaged for arXiv, bioRxiv, medRxiv</strong>
+          <p>The bundle zips compile-ready LaTeX, the verified draft, references.bib,
+          metadata, and a per-server submission checklist.</p>
+        </li>
+        <li>
+          <strong>Long-form without the pain</strong>
+          <p>Section-by-section word budgets and append-mode saving mean 20–80+ page
+          papers get drafted and verified incrementally, not re-sent wholesale.</p>
+        </li>
+      </ul>
+
+      <p class="honesty reveal">
+        <strong>Honest by design:</strong> submission itself stays manual. arXiv and its peers
+        require human endorsement and moderation, and a project whose brand is research
+        integrity won't route around that. Aurelius does everything up to the final click —
+        the final click is yours.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================== PRICING ========================== -->
+  <section class="pricing section-pad" id="pricing">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">Pricing</p>
+        <h2>The open-source server is free. The hosted product is coming.</h2>
+        <p class="lede pricing-note">
+          Today, Aurelius is a free, MIT-licensed MCP server with no caps. The plans below
+          describe the hosted product we're building on top of it — join the waitlist and
+          we'll tell you when it opens.
+        </p>
+      </div>
+
+      <div class="tiers reveal">
+        <div class="tier span3">
+          <h3>Free</h3>
+          <p class="price"><strong>$0</strong></p>
+          <ul>
+            <li>Verify ~20 references per run</li>
+            <li>Paste a bibliography, get a scored ledger</li>
+            <li>Retraction and author-match checks included</li>
+          </ul>
+          <p class="price">For trying it out.</p>
+          <div class="tier-cta">
+            <!-- TODO: replace href="#" with the waitlist URL when live -->
+            <a class="btn btn-ghost" href="#start">Use the open-source server now</a>
+          </div>
+        </div>
+
+        <div class="tier span3 featured">
+          <span class="badge">For researchers</span>
+          <h3>Individual</h3>
+          <p class="price"><strong>~$8–15</strong> /mo · planned</p>
+          <ul>
+            <li>Unlimited verification</li>
+            <li>Batch bibliographies</li>
+            <li>PDF upload</li>
+            <li>Word + BibTeX export</li>
+            <li>API access</li>
+          </ul>
+          <div class="tier-cta">
+            <!-- TODO: replace href="#" with the waitlist URL when live -->
+            <a class="btn btn-primary" href="#">Join the waitlist</a>
+          </div>
+        </div>
+
+        <div class="tier">
+          <h3>Hosted MCP</h3>
+          <p class="price"><strong>Coming soon</strong></p>
+          <ul>
+            <li>Zero-config managed remote MCP</li>
+            <li>Works with ChatGPT and remote clients</li>
+            <li>We handle the keys and rate limits</li>
+          </ul>
+          <div class="tier-cta">
+            <!-- TODO: replace href="#" with the waitlist URL when live -->
+            <a class="btn btn-ghost" href="#">Join the waitlist</a>
+          </div>
+        </div>
+
+        <div class="tier">
+          <h3>API</h3>
+          <p class="price"><strong>Usage-based</strong> · planned</p>
+          <ul>
+            <li>Verification-as-a-service for builders</li>
+            <li>Reference managers &amp; AI writing tools</li>
+            <li>Journal submission systems</li>
+          </ul>
+          <div class="tier-cta">
+            <!-- TODO: replace href="#" with the waitlist URL when live -->
+            <a class="btn btn-ghost" href="#">Join the waitlist</a>
+          </div>
+        </div>
+
+        <div class="tier">
+          <h3>Institutional / Journal</h3>
+          <p class="price"><strong>Contact us</strong></p>
+          <ul>
+            <li>For libraries and publishers</li>
+            <li>Fighting citation fraud and paper mills</li>
+            <li>Batch screening with audit trails</li>
+          </ul>
+          <div class="tier-cta">
+            <a class="btn btn-ghost" href="mailto:vibhorpandey09@gmail.com?subject=Aurelius%20—%20institutional%20inquiry">Contact us</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== ONBOARDING ========================== -->
+  <section class="start section-pad" id="start">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">Get started</p>
+        <h2>Verified research in three steps.</h2>
+      </div>
+
+      <div class="steps reveal">
+        <div class="step">
+          <div>
+            <h3>Install</h3>
+            <p>One package. Python 3.10+. The only runtime dependencies are
+              <code>mcp</code> and <code>httpx</code>.</p>
+            <div class="codeblock">
+              <button type="button" class="copy-btn js-copy" data-copy="pip install aurelius-mcp">Copy</button>
+              <pre>pip install aurelius-mcp</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <h3>Connect it to your app</h3>
+            <p>Add Aurelius to your MCP client's config. Citation verification needs no API
+              key; a free Tavily key is optional, for general web search.</p>
+            <div class="tabs" role="tablist" aria-label="Choose your app">
+              <button class="tab" role="tab" id="tab-claude-code" aria-selected="true" aria-controls="panel-claude-code" type="button">Claude Code</button>
+              <button class="tab" role="tab" id="tab-claude-desktop" aria-selected="false" aria-controls="panel-claude-desktop" type="button">Claude Desktop</button>
+              <button class="tab" role="tab" id="tab-cursor" aria-selected="false" aria-controls="panel-cursor" type="button">Cursor</button>
+              <button class="tab" role="tab" id="tab-gemini" aria-selected="false" aria-controls="panel-gemini" type="button">Gemini CLI</button>
+            </div>
+
+            <div class="tab-panel" id="panel-claude-code" role="tabpanel" aria-labelledby="tab-claude-code">
+              <div class="codeblock">
+                <button type="button" class="copy-btn js-copy" data-copy="claude mcp add aurelius -- aurelius">Copy</button>
+                <pre>claude mcp add aurelius -- aurelius</pre>
+              </div>
+            </div>
+            <div class="tab-panel" id="panel-claude-desktop" role="tabpanel" aria-labelledby="tab-claude-desktop" hidden>
+              <div class="codeblock">
+                <button type="button" class="copy-btn js-copy" data-copy='{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}'>Copy</button>
+                <pre>// claude_desktop_config.json  (Settings → Developer → Edit Config)
+{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}</pre>
+              </div>
+            </div>
+            <div class="tab-panel" id="panel-cursor" role="tabpanel" aria-labelledby="tab-cursor" hidden>
+              <div class="codeblock">
+                <button type="button" class="copy-btn js-copy" data-copy='{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}'>Copy</button>
+                <pre>// ~/.cursor/mcp.json
+{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}</pre>
+              </div>
+            </div>
+            <div class="tab-panel" id="panel-gemini" role="tabpanel" aria-labelledby="tab-gemini" hidden>
+              <div class="codeblock">
+                <button type="button" class="copy-btn js-copy" data-copy='{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}'>Copy</button>
+                <pre>// ~/.gemini/settings.json
+{
+  "mcpServers": {
+    "aurelius": { "command": "aurelius" }
+  }
+}</pre>
+              </div>
+            </div>
+            <p class="config-note">
+              Optional: add <code>"env": { "TAVILY_API_KEY": "tvly-…" }</code> to enable
+              general web search. If <code>aurelius</code> isn't on your PATH, use
+              <code>"command": "python", "args": ["-m", "aurelius"]</code> instead.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <h3>Ask it to verify</h3>
+            <p>Your app's model does the reasoning and writing; Aurelius supplies the
+              verification. No extra LLM key, no extra token bill.</p>
+            <blockquote class="ask-example">
+              "Use Aurelius to research the historical correlation between GDP growth and
+              unemployment, and verify every citation."
+            </blockquote>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== FAQ ========================== -->
+  <section class="faq section-pad" id="faq">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow">FAQ</p>
+        <h2>Questions, answered plainly.</h2>
+      </div>
+
+      <div class="faq-list reveal">
+        <details>
+          <summary>Do I need an API key?</summary>
+          <p class="answer">
+            Not for citation verification. OpenAlex and Crossref — the databases Aurelius
+            checks against — are free and keyless. A free
+            <a href="https://tavily.com">Tavily</a> key is optional: it enables general web
+            search and acts as a fallback for works not indexed in either scholarly database.
+          </p>
+        </details>
+        <details>
+          <summary>Which apps does it work with?</summary>
+          <p class="answer">
+            Today: Claude Desktop, Claude Code, Cursor, and Gemini CLI — all over local MCP
+            (stdio). ChatGPT needs a remote MCP deployment, which is what the Hosted MCP plan
+            is for — it's on the roadmap. Perplexity doesn't support user-added MCP servers yet.
+          </p>
+        </details>
+        <details>
+          <summary>Is it open source?</summary>
+          <p class="answer">
+            Yes — MIT licensed, on
+            <a href="https://github.com/vibhorxpandey/Aurelius">GitHub</a> and
+            <a href="https://pypi.org/project/aurelius-mcp/">PyPI</a>. The verification logic
+            you'd be trusting is code you can read.
+          </p>
+        </details>
+        <details>
+          <summary>How is this different from asking an AI to check citations?</summary>
+          <p class="answer">
+            An AI asked to "check" a citation asserts from memory — the same memory that
+            hallucinated the citation in the first place. Aurelius queries the live scholarly
+            record instead: DOI-direct lookup where an identifier exists, author and year
+            corroboration against the matched work, and a live retraction check. Every verdict
+            comes with the matched record attached.
+          </p>
+        </details>
+        <details>
+          <summary>Does it use my tokens or need its own model?</summary>
+          <p class="answer">
+            In the default host-driven mode, the app you connect it to (Claude, Gemini, …)
+            does the reasoning with its own model — covered by your existing subscription —
+            and Aurelius supplies the verification tools. Only the optional autonomous mode,
+            where Aurelius drives its own LLM end-to-end, needs a bring-your-own API key.
+          </p>
+        </details>
+        <details>
+          <summary>Can it check a paper I've already written?</summary>
+          <p class="answer">
+            Yes. Paste your References section into <code>verify_bibliography</code> and you
+            get a scored ledger for every entry, plus a cleaned, DOI-backed BibTeX file and
+            corrected citation strings for everything that resolved. Direct PDF upload is part
+            of the planned hosted product.
+          </p>
+        </details>
+        <details>
+          <summary>What happens when a citation fails?</summary>
+          <p class="answer">
+            You get the verdict, the reason, and — when Aurelius found a real record — a
+            <code>corrected_citation</code> built from authoritative metadata. A retracted
+            paper is an automatic reject. By default the ledger's threshold is 100%: one
+            failed citation and the whole report reads STATUS: REJECTED until it's fixed.
+          </p>
+        </details>
+        <details>
+          <summary>What if a paper is retracted after I cite it?</summary>
+          <p class="answer">
+            Retractions don't respect your publication date — a paper cited last month can be
+            retracted today. The <code>retraction_watch</code> tool re-checks previously
+            verified citations for new retractions or verification drift, either from a list
+            you pass or from every saved proof bundle.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== FUNDING / CONTACT ========================== -->
+  <section class="contact section-pad" id="contact">
+    <div class="wrap reveal">
+      <p class="eyebrow">Funding &amp; partnerships</p>
+      <h2>Building the verification layer for research.</h2>
+      <p class="lede">
+        Citation fraud, paper mills, and AI-hallucinated references are growing faster than
+        the tools to catch them. If you're interested in funding or partnering on Aurelius,
+        we'd like to talk.
+      </p>
+      <div class="contact-row">
+        <a class="btn btn-primary" href="mailto:vibhorpandey09@gmail.com?subject=Aurelius%20—%20funding%20%2F%20partnership">Email us</a>
+        <a class="btn btn-ghost" href="https://github.com/vibhorxpandey/Aurelius">GitHub</a>
+        <a class="btn btn-ghost" href="https://pypi.org/project/aurelius-mcp/">PyPI</a>
+      </div>
+      <p class="contact-links">
+        <span class="mono">vibhorpandey09@gmail.com</span>
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>Aurelius — a fact-checked research MCP server. MIT licensed. Under active development.</span>
+    <span class="mono">
+      <a href="https://github.com/vibhorxpandey/Aurelius">github.com/vibhorxpandey/Aurelius</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Enable animation only when the user allows motion. */
+  var motionOK = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (motionOK) {
+    document.documentElement.classList.add("anim");
+
+    /* Scroll reveals */
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        });
+      }, { rootMargin: "0px 0px -8% 0px" });
+      document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+    } else {
+      document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+    }
+  }
+
+  /* Copy buttons */
+  document.querySelectorAll(".js-copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.getAttribute("data-copy");
+      var done = function () {
+        var prev = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = prev; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  /* Config tabs */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) {
+        t.setAttribute("aria-selected", String(t === tab));
+        document.getElementById(t.getAttribute("aria-controls")).hidden = (t !== tab);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
