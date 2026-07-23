@@ -18,6 +18,6 @@ API key of its own (host-driven mode). An optional **autonomous mode** runs the 
 draft -> fact-check -> revise loop internally using a key you supply.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.6.1"
 
 __all__ = ["__version__"]
