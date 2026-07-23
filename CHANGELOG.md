@@ -3,6 +3,24 @@
 All notable changes to `aurelius-mcp` are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.1]
+
+Housekeeping patch — no runtime behavior changes.
+
+### Fixed
+- **`__version__` drift.** The in-package `aurelius.__version__` had fallen to `0.3.0`
+  while the distribution shipped `0.6.0` (three minor versions behind), despite 0.2.0
+  claiming the drift was fixed. Both are now synced, and a new `test_version.py` asserts
+  `aurelius.__version__` equals the `pyproject.toml` version so it can never silently
+  drift again.
+
+### Added
+- **Landing page** (`site/index.html`) — a self-contained, theme-aware overview page
+  (verification story + setup FAQ), ready to serve via GitHub Pages.
+
+### Docs
+- CHANGELOG footer now links every released version (0.3.0–0.6.1), not just 0.1.x/0.2.0.
+
 ## [0.6.0]
 
 Phases 4, 5 & 6 of the [architecture roadmap](ARCHITECTURE.md): the publication pipeline,
@@ -183,6 +201,11 @@ web-search evidence, draft/report saving, and an optional autonomous (BYO-key) m
 > Note: 0.1.1 was an internal version bump (repository URLs, author metadata) that was
 > superseded by 0.1.2 before publication and never released to PyPI.
 
+[0.6.1]: https://pypi.org/project/aurelius-mcp/0.6.1/
+[0.6.0]: https://pypi.org/project/aurelius-mcp/0.6.0/
+[0.5.0]: https://pypi.org/project/aurelius-mcp/0.5.0/
+[0.4.0]: https://pypi.org/project/aurelius-mcp/0.4.0/
+[0.3.0]: https://pypi.org/project/aurelius-mcp/0.3.0/
 [0.2.0]: https://pypi.org/project/aurelius-mcp/0.2.0/
 [0.1.2]: https://pypi.org/project/aurelius-mcp/0.1.2/
 [0.1.0]: https://pypi.org/project/aurelius-mcp/0.1.0/
